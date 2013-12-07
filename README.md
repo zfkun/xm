@@ -1,0 +1,4 @@
+
+## Useage
+	
+	$ scrapy crawl xm
