@@ -7,19 +7,21 @@ import json
 import time
 from datetime import datetime
 from scrapy.selector import Selector
-# from scrapy.contrib.linkextractors.sgml import SgmlLinkExtractor
 from scrapy.spider import BaseSpider
-from scrapy.http import Request
-from scrapy.http import FormRequest
+from scrapy.http import Request, FormRequest
 
 
+# TODO 活动时间标志(很多地方在用,目前先手工更新)
+DATE_TIME = '20131210'
 
 # 登录页
 URL_PAGE = 'https://account.xiaomi.com/pass/serviceLogin'
 # 登录API
 URL_LOGIN = 'https://account.xiaomi.com/pass/serviceLoginAuth2'
 # 检测API
-URL_CHECK = 'http://tc.hd.xiaomi.com/hdinfo?callback=hdinfo&_=%s'
+URL_CHECK = 'http://tc.hd.xiaomi.com/hdget?callback=hdcontrol&_=%s'
+# 检测API的referer(==抢购页)
+URL_CHECK_REFERER = 'http://p.www.xiaomi.com/m/op/page/%s/index.html' % ( DATE_TIME )
 # 订单页
 URL_ORDER_WEB = 'http://t.hd.xiaomi.com/s/%s&_m=1'
 # URL_ORDER_WEB = 'http://127.0.0.1:8848/order.html%s&_m=1'
@@ -28,12 +30,13 @@ URL_IMGCODE = 'http://t.hd.xiaomi.com/s/%s&_m=1&r=%s'
 
 # 登录成功后跳转URL
 RE_URL_LOGIN_SUCCESS = r'^http[s]?://account.xiaomi.com/pass/userInfo'
-# 检测
-RE_BODY_CHECK = r'\s?hdinfo\((.*?)\)\s?'
+# 检测API结果过滤(这里要注意要与`URL_CHECK`的callback参数值对应)
+RE_CHECK_BODY = r'\s?hdcontrol\((.*?)\)\s?'
 
 
 # 机型代号列表
 DEVICE_TYPES = {
+    'J': 's3-16-白-?',
     'K': 's3-16-黑-TD',
     'L': 's3-16-银-TD',
     'N': 's3-64-黑-?',
@@ -50,6 +53,8 @@ ACCOUNT_PWD = ''
 
 
 
+
+
 class XMSpider( BaseSpider ):
     name = 'xm'
     allowed_domains = [ 'xiaomi.com' ]
@@ -62,9 +67,13 @@ class XMSpider( BaseSpider ):
         # return [self.rob_success(
         #     {},
         #     {
-        #         'hdurl': '?_a=20131203_phone&_op=choose&_s=11111111111'
+        #         'hdurl': '?_a=20131210_phone&_op=choose&_s=11111111111'
         #     }
         # )]
+        
+        if ACCOUNT_NAME == '' or ACCOUNT_PWD == '':
+            print '帐号、密码忘填了!!'
+            return []
 
         print ''
         print '>>>>>> start_requests: ', URL_PAGE
@@ -133,27 +142,27 @@ class XMSpider( BaseSpider ):
     """分析登录结果"""
     def parse_login( self, res ):
         print ''
-        print '>>>>>> parse_post: '
+        print '>>>>>> parse_login: '
         print '跳转次数: ', res.meta[ 'redirect_times' ]
         print '跳转列表: ', res.meta[ 'redirect_urls' ]
         print '最终URL: ', res.url
 
         success = re.match( RE_URL_LOGIN_SUCCESS, res.url, re.I )
         if success:
-            print '登录成功!!'
+            print '登录成功'
             print ''
+
             return self.start_monitor()
         else:
             print '登录失败: '
 
-            sel = Selector( res )
-            errorMsg = sel.css( '.error_tips .et_con p::text' )
-            if errorMsg:
-                errorMsg = errorMsg.extract()[0]
+            msg = Selector( res ).css( '.error_tips .et_con p::text' )
+            if msg:
+                msg = msg.extract()[0]
             else:
-                errorMsg = '未知错误'
+                msg = '未知错误'
 
-            print errorMsg
+            print msg
             print ''
 
         return
@@ -163,11 +172,14 @@ class XMSpider( BaseSpider ):
     def start_monitor( self ):
         print ''
         print '>>>>>> start_monitor:'
-        # url = URL_CHECK % (datetime.now())
+
         now_timestamp = int(time.mktime(datetime.now().timetuple())) * 1000
         url = URL_CHECK % ( now_timestamp )
         request = Request(
             url = url,
+            headers = {
+                'Referer': URL_CHECK_REFERER
+            },
             callback = self.parse_monitor,
             dont_filter = True
         )
@@ -184,23 +196,19 @@ class XMSpider( BaseSpider ):
         # print ''
 
         # 获取&解析 JSON
-        d = re.findall(RE_BODY_CHECK, res.body, re.I)[0]
+        d = re.findall(RE_CHECK_BODY, res.body, re.I)[0]
         if ( d ):
-            print 'parse success:'
             print d
-            print 'decode:'
 
             try:
                 d = json.loads(d)
                 if d:
-                    print 'decode success'
                     return self.process_monitor( res, d )
-            finally:
-                print 'decode fail'
+            except Exception, e:
+                raise e
         else:
             print 'parse fail'
 
-        # loop
         return self.rob_fail( res )
 
 
@@ -215,11 +223,14 @@ class XMSpider( BaseSpider ):
             if len( data['hdurl'] ) > 0:
                 return self.rob_success( res, data )
             else:
-                if data['hdstart'] == False:
+                if data['reg'] == False:
+                    print '没有预约~~~'
+                    return
+                elif data['hdstart'] == False:
                     print '活动冇开始~~~'
                 elif data['hdstop']:
                     print '活动已结束~~'
-                    return
+                    # return
         else:
             print 'status 或 miphone 字段不存在'
 
@@ -235,17 +246,22 @@ class XMSpider( BaseSpider ):
 
 
         url = URL_ORDER_WEB % ( data['hdurl'] )
-        print 'redirect to: ', url
+        print '跳转到订单页: ', url
 
         # 跳转到订单页
         return Request(
                     url = url,
+                    headers = {
+                        'Referer': URL_CHECK_REFERER
+                    },
                     method = 'GET',
-                    callback = self.start_order
+                    callback = self.start_order,
+                    dont_filter = True
                )
 
     """抢失败"""
     def rob_fail( self, res ):
+        print ''
         print '没抢到~~~, next...'
         return self.start_monitor()
 
@@ -256,7 +272,7 @@ class XMSpider( BaseSpider ):
         # print res.body
 
         # 存储页面内容，备后续分析
-        log = open( 'order.log', 'a' )
+        log = open( 'order.html', 'a' )
         log.write( res.body + '\n-\n-\n-\n' )
         log.close()
 
@@ -271,13 +287,13 @@ class XMSpider( BaseSpider ):
         print 'DATA: ', formdata
 
         # TODO 暂时这里先跳过，待完成 pase_order 再放开
-        # return FormRequest(
-        #             url = url,
-        #             formdata = formdata,
-        #             callback = self.parse_order
-        #        )
+        return FormRequest(
+                    url = url,
+                    formdata = formdata,
+                    callback = self.parse_order
+               )
 
-        return
+        # return
 
     def parse_order( self, res ):
         print ''
@@ -285,12 +301,13 @@ class XMSpider( BaseSpider ):
         print res.request.url
 
         # 存储页面内容，备后续分析
-        log = open( 'order2.log', 'a' )
+        log = open( 'order2.html', 'a' )
         log.write( res.body + '\n-\n-\n-\n' )
         log.close()
 
         # FIXME 测试
-        self.order_success( res )
+        # self.order_success( res )
+        print '>>>>>> TODO 检测是否下单成功...order2.html'
 
         return
 
@@ -394,8 +411,10 @@ class XMSpider( BaseSpider ):
         print '检索结果:', device_enable
 
 
-        # TODO 设置选择设备为第一个可买设备, 找时间加上优先级策略
+        # 设置选择设备为第一个可买设备
+        # TODO 找时间加上优先级策略
         static_kvs[ key_mid ] = device_enable[0]
+
         # TODO 设置手工输入的验证码, 找时间完成手工输入
         static_kvs[ key_code ] = 'abcd'
 
