@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #-*-coding:utf-8-*-
 
-
 import re
 import json
 import time
@@ -9,49 +8,7 @@ from datetime import datetime
 from scrapy.selector import Selector
 from scrapy.spider import BaseSpider
 from scrapy.http import Request, FormRequest
-
-
-# TODO 活动时间标志(很多地方在用,目前先手工更新)
-DATE_TIME = '20131210'
-
-# 登录页
-URL_PAGE = 'https://account.xiaomi.com/pass/serviceLogin'
-# 登录API
-URL_LOGIN = 'https://account.xiaomi.com/pass/serviceLoginAuth2'
-# 检测API
-URL_CHECK = 'http://tc.hd.xiaomi.com/hdget?callback=hdcontrol&_=%s'
-# 检测API的referer(==抢购页)
-URL_CHECK_REFERER = 'http://p.www.xiaomi.com/m/op/page/%s/index.html' % ( DATE_TIME )
-# 订单页
-URL_ORDER_WEB = 'http://t.hd.xiaomi.com/s/%s&_m=1'
-# URL_ORDER_WEB = 'http://127.0.0.1:8848/order.html%s&_m=1'
-# 验证码， 注意：第一参数需替换 _op=choose 为 _op=authcode
-URL_IMGCODE = 'http://t.hd.xiaomi.com/s/%s&_m=1&r=%s'
-
-# 登录成功后跳转URL
-RE_URL_LOGIN_SUCCESS = r'^http[s]?://account.xiaomi.com/pass/userInfo'
-# 检测API结果过滤(这里要注意要与`URL_CHECK`的callback参数值对应)
-RE_CHECK_BODY = r'\s?hdcontrol\((.*?)\)\s?'
-
-
-# 机型代号列表
-DEVICE_TYPES = {
-    'J': 's3-16-白-?',
-    'K': 's3-16-黑-TD',
-    'L': 's3-16-银-TD',
-    'N': 's3-64-黑-?',
-    'F': 'h-?-灰-移动',
-    'M': 'h-?-灰-联通',
-    'B': 's2-32-?-标准',
-    'C': 'S2-32-?-电信',
-}
-
-
-# 登录帐号信息
-ACCOUNT_NAME = ''
-ACCOUNT_PWD = ''
-
-
+# from scrapy.settings import Settings
 
 
 
@@ -71,15 +28,15 @@ class XMSpider( BaseSpider ):
         #     }
         # )]
         
-        if ACCOUNT_NAME == '' or ACCOUNT_PWD == '':
+        if self.settings[ 'ACCOUNT_NAME' ] == '' or self.settings[ 'ACCOUNT_PWD' ] == '':
             print '帐号、密码忘填了!!'
             return []
 
         print ''
-        print '>>>>>> start_requests: ', URL_PAGE
+        print '>>>>>> start_requests: ', self.settings[ 'URL_PAGE' ]
         print ''
         return [Request(
-                    url = URL_PAGE,
+                    url = self.settings[ 'URL_PAGE' ],
                     method = 'get',
                     callback = self.parse_request
                 )]
@@ -90,7 +47,7 @@ class XMSpider( BaseSpider ):
         print ''
         print '>>>>>> parse_request: ', res.url
 
-        if res.url == URL_PAGE:
+        if res.url == self.settings[ 'URL_PAGE' ]:
             print '准备解析登录参数: '
 
             params = {}
@@ -120,12 +77,12 @@ class XMSpider( BaseSpider ):
 
         # 合并登录参数
         # formdata = {
-        #     'user': ACCOUNT_NAME,
-        #     'pwd': ACCOUNT_PWD
+        #     'user': self.settings[ 'ACCOUNT_NAME' ],
+        #     'pwd': self.settings[ 'ACCOUNT_PWD' ]
         # }.update( params )
         formdata = dict({
-            'user': ACCOUNT_NAME,
-            'pwd': ACCOUNT_PWD
+            'user': self.settings[ 'ACCOUNT_NAME' ],
+            'pwd': self.settings[ 'ACCOUNT_PWD' ]
         }, **params )
         
         print '发送数据: '
@@ -133,7 +90,7 @@ class XMSpider( BaseSpider ):
         print ''
 
         return [FormRequest(
-                    url = URL_LOGIN,
+                    url = self.settings[ 'URL_LOGIN' ],
                     formdata = formdata,
                     callback = self.parse_login
                 )]
@@ -147,7 +104,7 @@ class XMSpider( BaseSpider ):
         print '跳转列表: ', res.meta[ 'redirect_urls' ]
         print '最终URL: ', res.url
 
-        success = re.match( RE_URL_LOGIN_SUCCESS, res.url, re.I )
+        success = re.match( self.settings[ 'RE_URL_LOGIN_SUCCESS' ], res.url, re.I )
         if success:
             print '登录成功'
             print ''
@@ -174,11 +131,11 @@ class XMSpider( BaseSpider ):
         print '>>>>>> start_monitor:'
 
         now_timestamp = int(time.mktime(datetime.now().timetuple())) * 1000
-        url = URL_CHECK % ( now_timestamp )
+        url = self.settings[ 'URL_CHECK' ] % ( now_timestamp )
         request = Request(
             url = url,
             headers = {
-                'Referer': URL_CHECK_REFERER
+                'Referer': self.settings[ 'URL_CHECK_REFERER' ]
             },
             callback = self.parse_monitor,
             dont_filter = True
@@ -196,12 +153,12 @@ class XMSpider( BaseSpider ):
         # print ''
 
         # 获取&解析 JSON
-        d = re.findall(RE_CHECK_BODY, res.body, re.I)[0]
+        d = re.findall( self.settings[ 'RE_CHECK_BODY' ], res.body, re.I )[0]
         if ( d ):
             print d
 
             try:
-                d = json.loads(d)
+                d = json.loads( d )
                 if d:
                     return self.process_monitor( res, d )
             except Exception, e:
@@ -245,14 +202,14 @@ class XMSpider( BaseSpider ):
         log.close()
 
 
-        url = URL_ORDER_WEB % ( data['hdurl'] )
+        url = self.settings[ 'URL_ORDER_WEB'] % ( data['hdurl'] )
         print '跳转到订单页: ', url
 
         # 跳转到订单页
         return Request(
                     url = url,
                     headers = {
-                        'Referer': URL_CHECK_REFERER
+                        'Referer': self.settings[ 'URL_CHECK_REFERER' ]
                     },
                     method = 'GET',
                     callback = self.start_order,
@@ -277,9 +234,24 @@ class XMSpider( BaseSpider ):
         log.close()
 
 
-        # TODOP 解析生成表单参数并存储到文件
+        # 解析生成表单参数并存储到文件
         sel = Selector( res )
-        url = sel.css('#selectForm::attr(action)').extract()[0]
+
+        # 先确认是否是订单页，这里可能会出现各种错误页
+        url = sel.css('#selectForm::attr(action)')
+
+        # 不是订单页
+        if not url:
+            # 已经抢过了
+            # http://p.www.xiaomi.com/m/opentip/phone/tip_OnlyOne.html?v=201312092209
+            url = sel.css( '.tips_wrap' )
+            if url:
+                print url.css( 'h3::text' ).extract()[0]
+
+            return
+
+        # 确定是订单页，则继续逻辑
+        url = url.extract()[0]
         formdata = self.parse_formdata_order( res )
 
         print '请求订单api:'
@@ -292,8 +264,6 @@ class XMSpider( BaseSpider ):
                     formdata = formdata,
                     callback = self.parse_order
                )
-
-        # return
 
     def parse_order( self, res ):
         print ''
@@ -311,15 +281,14 @@ class XMSpider( BaseSpider ):
 
         return
 
+    """解析生成表单参数"""
     def parse_formdata_order( self, res ):
         print ''
         print '>>>>>> parse_formdata_order:'
 
-        # TODO  解析生成表单参数并存储到文件
-
         # 过滤出from field数据，供后续解析
         data = re.findall(
-            r'insertDom\((.*?)\);',
+            self.settings[ 'RE_FORM_FIELDS_ORDER' ],
             res.body,
             re.I
         )[0]
@@ -350,7 +319,7 @@ class XMSpider( BaseSpider ):
         
         # 2.1 选择机型代号
         key_mid = re.findall(
-            r'document\.getElementById\(\'(\w+)\'\)\.value\s?=\s?mid\s?',
+            self.settings[ 'RE_FORM_FIELD_MID' ],
             res.body,
             re.I
         )[0]
@@ -402,11 +371,11 @@ class XMSpider( BaseSpider ):
         device_enable = []
         radios = sel.css('div.radio').extract()
         for r in radios:
-            if re.findall( r'soldOver', r, re.I ):
+            if re.findall( self.settings[ 'RE_ORDER_DEVICE_SOLDOVER' ], r, re.I ):
                 pass
             else:
                 device_enable.append(
-                    re.findall( r'mid="(\w+)"', r, re.I )[0]
+                    re.findall( self.settings[ 'RE_ORDER_MID_ATTR' ], r, re.I )[0]
                 )
         print '检索结果:', device_enable
 
