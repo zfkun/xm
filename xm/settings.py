@@ -42,7 +42,7 @@ DEVICE_TYPES = {
 
 
 # TODO 活动时间标志(很多地方在用,目前先手工更新)
-DATE_TIME = '20131210'
+DATE_TIME = '20131217'
 
 # 登录页
 URL_PAGE = 'https://account.xiaomi.com/pass/serviceLogin'

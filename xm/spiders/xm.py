@@ -100,9 +100,12 @@ class XMSpider( BaseSpider ):
     def parse_login( self, res ):
         print ''
         print '>>>>>> parse_login: '
-        print '跳转次数: ', res.meta[ 'redirect_times' ]
-        print '跳转列表: ', res.meta[ 'redirect_urls' ]
         print '最终URL: ', res.url
+
+        if 'redirect_times' in res.meta:
+            print '跳转次数: ', res.meta[ 'redirect_times' ]
+        if 'redirect_urls' in res.meta:
+            print '跳转列表: ', res.meta[ 'redirect_urls' ]
 
         success = re.match( self.settings[ 'RE_URL_LOGIN_SUCCESS' ], res.url, re.I )
         if success:
