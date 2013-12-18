@@ -8,6 +8,7 @@ from datetime import datetime
 from scrapy.selector import Selector
 from scrapy.spider import BaseSpider
 from scrapy.http import Request, FormRequest
+from scrapy.utils.response import open_in_browser
 # from scrapy.settings import Settings
 
 
@@ -130,8 +131,17 @@ class XMSpider( BaseSpider ):
 
 
     def start_monitor( self ):
+
+        now_time = datetime.today()
+        start_time = datetime( now_time.year, now_time.month, now_time.day, 11, 59, 0 )
+        while now_time < start_time:
+            print '活动开始还有%s，休眠%s秒再检测...' % ( start_time - now_time, self.settings[ 'SLEEP_TIME' ] )
+            time.sleep( self.settings[ 'SLEEP_TIME' ] )
+            now_time = datetime.today()
+
         print ''
         print '>>>>>> start_monitor:'
+
 
         now_timestamp = int(time.mktime(datetime.now().timetuple())) * 1000
         url = self.settings[ 'URL_CHECK' ] % ( now_timestamp )
@@ -199,7 +209,8 @@ class XMSpider( BaseSpider ):
 
     """抢成功"""
     def rob_success( self, res, data ):
-        print '!!!!!! 抢到一个:', data['hdurl']
+        print ''
+        print '抢到一个:', data['hdurl']
         log = open( 'rob.log', 'a' )
         log.write( json.dumps(data) + '\n' )
         log.close()
@@ -281,6 +292,8 @@ class XMSpider( BaseSpider ):
         # FIXME 测试
         # self.order_success( res )
         print '>>>>>> TODO 检测是否下单成功...order2.html'
+
+        print '准备往TIP页跳:', 'http://p.www.xiaomi.com/m/opentip/phone/tip_Wait.html?_a=20131217_phone&_s=e439d0e5040c&v=201312121353'
 
         return
 
