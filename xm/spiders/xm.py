@@ -4,11 +4,12 @@
 import re
 import json
 import time
+import random
 from datetime import datetime
 from scrapy.selector import Selector
 from scrapy.spider import BaseSpider
 from scrapy.http import Request, FormRequest
-from scrapy.utils.response import open_in_browser
+# from scrapy.utils.response import open_in_browser
 # from scrapy.settings import Settings
 
 
@@ -154,7 +155,16 @@ class XMSpider( BaseSpider ):
             dont_filter = True
         )
 
+        # proxy
+        proxy = self.settings[ 'PROXY_LIST' ]
+        if proxy and len( proxy ) > 0:
+            proxy = random.choice( proxy )
+            request.meta[ 'proxy' ] = 'http://%s' % ( proxy )
+        else:
+            proxy = ''
+
         print url
+        print 'proxy: %s' % ( proxy )
         print ''
 
         return request

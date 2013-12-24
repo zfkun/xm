@@ -21,6 +21,8 @@ DOWNLOADER_MIDDLEWARES = {
 	'xm.contrib.downloadermiddleware.useragent.RandomUserAgentMiddleware': 400,
 }
 
+# proxy list
+PROXY_LIST = []
 
 
 # 登录帐号信息
@@ -44,7 +46,7 @@ DEVICE_TYPES = {
 SLEEP_TIME = 10
 
 # TODO 活动时间标志(很多地方在用,目前先手工更新)
-DATE_TIME = '20131217'
+DATE_TIME = '20131224'
 
 # 登录页
 URL_PAGE = 'https://account.xiaomi.com/pass/serviceLogin'

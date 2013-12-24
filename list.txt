@@ -1,0 +1,169 @@
+87.255.53.35:80,1,false,Netherlands
+5.39.223.19:3128,1,false,Netherlands
+89.200.252.149:3128,1,true,Ukraine
+218.108.192.205:82,1,false,China
+77.175.154.158:80,1,false,Netherlands
+111.1.32.51:83,1,false,China
+118.26.57.13:81,1,false,China
+202.101.193.91:63000,1,true,China
+97.68.0.150:7004,1,false,United States
+27.17.33.122:8001,1,false,China
+89.103.66.181:21320,1,false,Czech Republic
+213.135.234.6:81,1,true,Luxembourg
+210.209.24.177:80,1,false,Taiwan
+50.150.91.147:7004,1,false,United States
+91.228.154.214:3128,1,false,Germany
+77.175.80.57:80,1,false,Netherlands
+196.1.94.122:80,1,false,Senegal
+58.242.249.31:19320,1,false,China
+37.187.32.4:3128,1,true,France
+122.96.59.99:82,1,false,China
+218.108.232.189:82,1,false,China
+94.203.88.84:80,1,false,United Arab Emirates
+72.181.250.49:8118,1,true,United States
+71.196.96.74:7004,1,false,United States
+67.223.238.153:80,2,false,United States
+46.166.195.39:8080,2,false,Russian Federation
+63.249.146.73:29786,2,false,United States
+87.84.48.235:80,2,false,United Kingdom
+77.36.153.18:8080,2,true,Iran, Islamic Republic of
+209.164.75.73:29786,2,false,United States
+115.84.179.93:80,2,false,Vietnam
+190.95.138.90:8080,2,false,Ecuador
+61.155.136.187:80,2,false,China
+108.177.171.106:33948,2,false,United States
+204.178.0.39:80,2,false,United States
+63.249.141.73:29786,2,true,United States
+23.105.129.122:15692,2,false,United States
+203.128.68.146:8080,2,true,Indonesia
+23.227.191.3:8000,2,false,United States
+23.105.129.122:25085,2,false,United States
+95.172.56.149:8080,2,false,Russian Federation
+209.164.78.73:29786,2,false,United States
+37.187.97.36:3128,2,true,France
+193.50.189.252:80,2,false,France
+108.177.171.106:33719,2,false,United States
+201.251.228.82:80,2,false,Argentina
+93.89.108.33:8080,2,true,Czech Republic
+168.226.35.19:80,3,false,Argentina
+116.66.197.49:8080,3,true,Nepal
+177.21.250.118:80,3,true,Brazil
+67.45.172.169:87,3,false,United States
+122.226.122.201:8080,3,false,China
+190.122.185.199:8080,3,false,Guatemala
+177.129.53.166:3128,3,true,Brazil
+14.18.17.166:80,3,false,China
+109.207.61.144:8090,3,true,Poland
+139.192.146.78:8080,3,true,Indonesia
+193.254.236.118:3128,3,false,Germany
+37.187.90.96:3128,3,true,France
+118.97.130.10:8080,3,true,Indonesia
+66.219.169.213:3128,3,true,United States
+66.219.169.213:3128,3,true,United States
+190.249.177.59:8080,3,true,Colombia
+101.255.60.162:3128,3,false,Indonesia
+109.224.62.197:80,3,false,Iraq
+61.135.151.122:80,3,false,China
+201.49.209.146:3128,3,true,Brazil
+82.77.58.36:3128,3,true,Romania
+46.253.135.237:8080,3,true,Iraq
+196.205.126.42:8080,3,true,Egypt
+23.88.228.240:8080,3,false,United States
+181.166.149.12:8080,3,true,Argentina
+101.255.65.10:8080,3,true,Indonesia
+41.207.116.37:3128,3,true,Kenya
+211.151.50.72:8080,3,false,China
+177.75.160.41:8080,3,false,Brazil
+196.22.136.44:3128,3,false,South Africa
+222.180.173.2:8080,3,false,China
+124.162.168.182:8080,3,false,China
+61.148.203.62:3128,3,false,China
+180.180.121.130:8080,3,false,Thailand
+101.255.36.54:8080,3,false,Indonesia
+222.180.173.6:8080,3,false,China
+41.221.216.177:8080,3,false,South Africa
+115.124.72.222:3128,3,false,Indonesia
+203.86.16.249:8080,3,true,China
+88.150.186.204:8090,3,false,United Kingdom
+202.118.236.130:7777,3,false,China
+94.154.31.20:8090,3,false,Poland
+190.249.202.232:8080,3,false,Colombia
+67.45.184.153:87,3,false,United States
+168.226.35.19:8080,3,false,Argentina
+193.254.236.116:3128,3,true,Germany
+111.10.19.101:3128,3,true,China
+180.250.160.58:8080,3,true,Indonesia
+41.207.106.113:3128,3,false,Kenya
+120.84.236.127:8080,3,true,China
+190.82.89.155:3128,3,false,Chile
+222.180.173.4:8080,3,false,China
+193.254.236.181:3128,3,false,Germany
+203.161.24.74:8080,3,true,Indonesia
+200.150.66.226:3128,3,false,Brazil
+190.249.133.219:8080,3,true,Colombia
+193.254.236.106:3128,3,false,Germany
+193.254.236.121:3128,3,false,Germany
+70.158.128.249:8888,3,false,United States
+222.66.97.75:8080,3,false,China
+211.143.226.179:80,3,false,China
+190.122.185.211:8080,3,false,Guatemala
+202.69.105.238:3128,3,false,Indonesia
+190.122.185.218:8080,3,true,Guatemala
+66.219.169.210:3128,3,true,United States
+60.55.55.142:80,3,false,China
+109.207.61.181:8090,3,false,Poland
+175.144.180.121:8080,3,true,Malaysia
+116.11.32.40:3128,3,true,China
+103.16.113.39:8080,3,true,Indonesia
+139.194.53.222:8080,3,true,Indonesia
+193.254.236.10:3128,3,false,Germany
+80.90.27.60:8080,3,true,Latvia
+201.210.78.48:8080,3,true,Venezuela
+202.106.16.36:3128,3,false,China
+119.147.143.40:3128,3,true,China
+125.93.77.125:3128,3,false,China
+14.18.16.69:80,3,false,China
+194.243.92.30:3128,3,true,Italy
+109.207.61.147:8090,3,true,Poland
+193.254.236.36:3128,3,false,Germany
+193.254.236.201:3128,3,false,Germany
+14.18.16.71:80,3,false,China
+193.254.236.29:3128,3,false,Germany
+193.254.236.73:3128,3,false,Germany
+109.207.61.170:8090,3,true,Poland
+190.131.0.56:8080,3,true,Ecuador
+202.138.236.69:8080,3,true,Indonesia
+192.3.21.18:80,3,false,United States
+193.254.236.130:3128,3,true,Germany
+94.154.26.132:8090,3,false,Poland
+190.122.186.202:8080,3,false,Guatemala
+174.32.109.194:87,3,false,United States
+193.254.236.16:3128,3,false,Germany
+65.61.203.50:9000,3,false,Canada
+77.223.243.122:8080,3,false,Poland
+193.254.236.62:3128,3,false,Germany
+184.22.219.75:3128,3,false,United States
+193.254.236.18:3128,3,false,Germany
+220.181.160.144:80,3,true,China
+190.122.185.205:8080,3,false,Guatemala
+193.254.236.213:3128,3,false,Germany
+190.122.185.221:8080,3,false,Guatemala
+190.122.186.213:8080,3,false,Guatemala
+61.19.30.198:8080,3,false,Thailand
+23.227.176.116:8080,3,false,United States
+42.120.50.45:17657,3,false,China
+42.120.50.45:33925,3,false,China
+42.120.50.45:19532,3,false,China
+42.120.50.45:39385,3,false,China
+42.120.50.45:34015,3,false,China
+42.120.50.45:16086,3,false,China
+193.254.236.9:3128,3,false,Germany
+193.254.236.66:3128,3,false,Germany
+193.254.236.168:3128,3,false,Germany
+219.159.199.6:9999,3,true,China
+193.254.236.240:3128,3,false,Germany
+222.218.157.23:9999,3,true,China
+187.73.197.16:3129,3,false,Brazil
+190.122.186.223:8080,3,false,Guatemala
+89.28.67.20:8080,3,false,Moldova
+109.207.61.175:8090,3,false,Poland
