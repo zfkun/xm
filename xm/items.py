@@ -3,14 +3,6 @@
 
 from scrapy.item import Item, Field
 
-class LoginFormDataItem(Item):
-    user = Field()
-    pwd = Field()
-    # callback = Field()
-    # sid = Field()
-    # qs = Field()
-    # _sign = Field()
-
 class ProxyItem( Item ):
     ip = Field()
     port = Field()

@@ -6,6 +6,10 @@ BOT_NAME = 'xm'
 SPIDER_MODULES = ['xm.spiders']
 NEWSPIDER_MODULE = 'xm.spiders'
 
+# LOG_ENABLED = True
+# LOG_ENCODING = 'utf-8'
+LOG_FILE = 'scrapy.log'
+
 COOKIES_ENABLED = True
 COOKIES_DEBUG = True
 
@@ -45,23 +49,29 @@ DEVICE_TYPES = {
 # 活动开始前每次检测的休眠间隔(s)
 SLEEP_TIME = 10
 
-# TODO 活动时间标志(很多地方在用,目前先手工更新)
-DATE_TIME = '20131224'
 
+# 首页(主要用来获取'开放时间点'')
+URL_HOME = 'http://www.xiaomi.com/'
+# 预约页
+URL_SUBSCRIBE = 'http://p.www.xiaomi.com/open/hd.html'
+# 预约页跳转
+URL_SUBSCRIBE_FINAL = 'http://p.www.xiaomi.com/open/index.html'
 # 登录页
-URL_PAGE = 'https://account.xiaomi.com/pass/serviceLogin'
+URL_PASS = 'https://account.xiaomi.com/pass/serviceLogin'
 # 登录API
 URL_LOGIN = 'https://account.xiaomi.com/pass/serviceLoginAuth2'
 # 检测API
 URL_CHECK = 'http://tc.hd.xiaomi.com/hdget?callback=hdcontrol&_=%s'
 # 检测API的referer(==抢购页)
-URL_CHECK_REFERER = 'http://p.www.xiaomi.com/m/op/page/%s/index.html' % ( DATE_TIME )
+URL_CHECK_REFERER = 'http://p.www.xiaomi.com/m/op/page/%s/index.html'
 # 订单页
 URL_ORDER_WEB = 'http://t.hd.xiaomi.com/s/%s&_m=1'
 # URL_ORDER_WEB = 'http://127.0.0.1:8848/order.html%s&_m=1'
 # 验证码， 注意：第一参数需替换 _op=choose 为 _op=authcode
 URL_IMGCODE = 'http://t.hd.xiaomi.com/s/%s&_m=1&r=%s'
 
+# 活动开始时间(从首页的Tip处分析获取,得到格式为: [ '年', '月', '时' ])
+RE_TIME_START = r'(\d+)'
 # 登录成功后跳转URL
 RE_URL_LOGIN_SUCCESS = r'^http[s]?://account.xiaomi.com/pass/userInfo'
 # 检测API结果过滤(这里要注意要与`URL_CHECK`的callback参数值对应)

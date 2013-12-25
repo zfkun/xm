@@ -17,39 +17,73 @@ from scrapy.http import Request, FormRequest
 class XMSpider( BaseSpider ):
     name = 'xm'
     allowed_domains = [ 'xiaomi.com' ]
+    
+    # 开放购买时间
+    open_time = '20131224'
+    # 部分请求需要
+    url_referer_check = None
 
+
+    """请求首页获取关键数据"""
+    def start_requests( self ):
+        print ''
+        print '>>>>>> start_requests: '
+
+        return [
+            Request(
+                url = self.settings[ 'URL_HOME' ],
+                method = 'get',
+                callback = self.start_init
+            )
+        ]
+
+    """初始化准备"""
+    def start_init( self, res ):
+        print ''
+        print '>>>>>> start_init: ', res.url
+
+        sel = Selector( res )
+
+        print '获取开放时间:'
+        hdStartTip = sel.css( '#kaifanggm::text' )
+        if hdStartTip:
+            t = hdStartTip.extract()[0]
+            t = re.findall( self.settings[ 'RE_TIME_START' ], t, re.I )
+            self.open_time = str(datetime.today().year) + t[0] + t[1]
+            print '获取成功: ', self.open_time
+        else:
+            print '开放时间获取失败'
+            return
+
+        print '初始化相关url变量:'
+        self.url_referer_check = self.settings[ 'URL_CHECK_REFERER' ] % ( self.open_time )
+        print 'url_referer_check: ', self.url_referer_check
+
+        return self.start_loginprepare()
 
     """请求登录页面，解析出登录所需参数"""
-    def start_requests( self ):
+    def start_loginprepare( self ):
+        print ''
+        print '>>>>>> start_loginprepare: '
 
-        # # FIXME 临时测试
-        # return [self.rob_success(
-        #     {},
-        #     {
-        #         'hdurl': '?_a=20131210_phone&_op=choose&_s=11111111111'
-        #     }
-        # )]
-        
         if self.settings[ 'ACCOUNT_NAME' ] == '' or self.settings[ 'ACCOUNT_PWD' ] == '':
             print '帐号、密码忘填了!!'
-            return []
+            return
 
-        print ''
-        print '>>>>>> start_requests: ', self.settings[ 'URL_PAGE' ]
-        print ''
-        return [Request(
-                    url = self.settings[ 'URL_PAGE' ],
+        print self.settings[ 'URL_PASS' ]
+
+        return Request(
+                    url = self.settings[ 'URL_PASS' ],
                     method = 'get',
-                    callback = self.parse_request
-                )]
-
+                    callback = self.parse_loginprepare
+               )
 
     """解析出登录所需参数"""
-    def parse_request( self, res ):
+    def parse_loginprepare( self, res ):
         print ''
-        print '>>>>>> parse_request: ', res.url
+        print '>>>>>> parse_loginprepare: ', res.url
 
-        if res.url == self.settings[ 'URL_PAGE' ]:
+        if res.url == self.settings[ 'URL_PASS' ]:
             print '准备解析登录参数: '
 
             params = {}
@@ -69,7 +103,7 @@ class XMSpider( BaseSpider ):
             print '无法识别的request: ', res.url
             print res
 
-            return []
+            return
 
 
     """执行登录"""
@@ -91,11 +125,11 @@ class XMSpider( BaseSpider ):
         print formdata
         print ''
 
-        return [FormRequest(
+        return FormRequest(
                     url = self.settings[ 'URL_LOGIN' ],
                     formdata = formdata,
                     callback = self.parse_login
-                )]
+                )
 
 
     """分析登录结果"""
@@ -149,7 +183,7 @@ class XMSpider( BaseSpider ):
         request = Request(
             url = url,
             headers = {
-                'Referer': self.settings[ 'URL_CHECK_REFERER' ]
+                'Referer': self.url_referer_check
             },
             callback = self.parse_monitor,
             dont_filter = True
@@ -205,7 +239,7 @@ class XMSpider( BaseSpider ):
             else:
                 if data['reg'] == False:
                     print '没有预约~~~'
-                    return
+                    return self.start_subscribe()
                 elif data['hdstart'] == False:
                     print '活动冇开始~~~'
                 elif data['hdstop']:
@@ -216,6 +250,57 @@ class XMSpider( BaseSpider ):
 
         return self.rob_fail( res )
 
+
+    def start_subscribe( self ):
+        # 1. http://p.www.xiaomi.com/open/index.html?20131217
+        #    .prebtn
+        # 2. 
+        print ''
+        print '>>>>>> start_subscribe:'
+        print 'TODO'
+        
+        return Request(
+                    url = self.settings[ 'URL_SUBSCRIBE' ],
+                    method = 'get',
+                    callback = self.parse_subscribe
+               )
+
+    def parse_subscribe( self, res ):
+        print ''
+        print '>>>>>> parse_subscribe:'
+        print res.url
+
+        resUrl = res.url
+
+        if resUrl == self.settings[ 'URL_SUBSCRIBE' ]:
+            print '准备跳转: %s' % ( self.settings[ 'URL_SUBSCRIBE_FINAL' ] )
+
+            return Request(
+                    url = self.settings[ 'URL_SUBSCRIBE_FINAL' ],
+                    method = 'get',
+                    headers = {
+                        'Referer': resUrl
+                    },
+                    callback = self.parse_subscribe
+                )
+        elif resUrl == self.settings[ 'URL_SUBSCRIBE_FINAL' ]:
+            sel = Selector( res )
+            btn = sel.css( '.prebtn' )
+            if btn:
+                url = btn.xpath( '@href' ).extract()[0]
+                print '准备跳转: ', url
+
+                return Request(
+                    url = url,
+                    method = 'get',
+                    headers = {
+                        'Referer': resUrl
+                    },
+                    callback = self.parse_subscribe
+                )
+        else:
+            print 'TODO'
+            return
 
     """抢成功"""
     def rob_success( self, res, data ):
@@ -233,7 +318,7 @@ class XMSpider( BaseSpider ):
         return Request(
                     url = url,
                     headers = {
-                        'Referer': self.settings[ 'URL_CHECK_REFERER' ]
+                        'Referer': self.url_referer_check
                     },
                     method = 'GET',
                     callback = self.start_order,
