@@ -1,6 +1,11 @@
 #!/usr/bin/python
 #-*-coding:utf-8-*-
 
+# 解决中文解码报错问题
+import sys
+reload( sys ) 
+sys.setdefaultencoding( 'utf-8' )
+
 import re
 import json
 import time
@@ -9,8 +14,9 @@ from datetime import datetime
 from scrapy.selector import Selector
 from scrapy.spider import BaseSpider
 from scrapy.http import Request, FormRequest
-# from scrapy.utils.response import open_in_browser
+from scrapy.utils.response import open_in_browser
 # from scrapy.settings import Settings
+
 
 
 
@@ -18,10 +24,11 @@ class XMSpider( BaseSpider ):
     name = 'xm'
     allowed_domains = [ 'xiaomi.com' ]
     
-    # 开放购买时间
-    open_time = '20131224'
-    # 部分请求需要
-    url_referer_check = None
+    # 可能会动态修改的配置项
+    account = '' # 帐号
+    password = '' # 密码
+    open_time = '' # 开放购买时间 形如: '20131224'
+    url_referer_check = '' # 部分请求需要
 
 
     """请求首页获取关键数据"""
@@ -67,10 +74,14 @@ class XMSpider( BaseSpider ):
         print '>>>>>> start_loginprepare: '
 
         if self.settings[ 'ACCOUNT_NAME' ] == '' or self.settings[ 'ACCOUNT_PWD' ] == '':
-            print '帐号、密码忘填了!!'
-            return
+            print '帐号、密码未配置，需手动输入:'
+            while len( self.account ) == 0:
+                self.account = raw_input('帐号：')
+            while len( self.password ) == 0:
+                # self.password = getpass.getpass('密码：')
+                self.password = raw_input('密码：')
 
-        print self.settings[ 'URL_PASS' ]
+        print '发送请求 -> ', self.settings[ 'URL_PASS' ]
 
         return Request(
                     url = self.settings[ 'URL_PASS' ],
@@ -113,12 +124,12 @@ class XMSpider( BaseSpider ):
 
         # 合并登录参数
         # formdata = {
-        #     'user': self.settings[ 'ACCOUNT_NAME' ],
-        #     'pwd': self.settings[ 'ACCOUNT_PWD' ]
+        #     'user': self.account or self.settings[ 'ACCOUNT_NAME' ],
+        #     'pwd': self.password or self.settings[ 'ACCOUNT_PWD' ]
         # }.update( params )
         formdata = dict({
-            'user': self.settings[ 'ACCOUNT_NAME' ],
-            'pwd': self.settings[ 'ACCOUNT_PWD' ]
+            'user': self.account or self.settings[ 'ACCOUNT_NAME' ],
+            'pwd': self.password or self.settings[ 'ACCOUNT_PWD' ]
         }, **params )
         
         print '发送数据: '
@@ -251,56 +262,257 @@ class XMSpider( BaseSpider ):
         return self.rob_fail( res )
 
 
+
     def start_subscribe( self ):
-        # 1. http://p.www.xiaomi.com/open/index.html?20131217
-        #    .prebtn
-        # 2. 
         print ''
         print '>>>>>> start_subscribe:'
-        print 'TODO'
         
+        url = self.settings[ 'URL_SUBSCRIBE' ] % ( self.open_time[:4], self.open_time[4:] )
+        print url
+
         return Request(
-                    url = self.settings[ 'URL_SUBSCRIBE' ],
+                    url = url,
                     method = 'get',
-                    callback = self.parse_subscribe
+                    headers = {
+                        'Referer': self.settings[ 'URL_HOME_RERERER' ]
+                    },
+                    callback = self.process_subscribe
                )
+
+    def process_subscribe( self, res ):
+        print ''
+        print '>>>>>> process_subscribe:'
+        print res.url
+
+        sel = Selector( res )
+        btns = sel.css( '.btnbox li > a' )
+        if btns:
+            for btn in btns:
+                txt = btn.css( '::text' ).extract()[0]
+                url = btn.xpath( '@href' ).extract()[0]
+                print '按钮 -> %s , %s' % ( txt, url )
+                
+                if '手机' in txt:
+                    url = btn.xpath( '@href' ).extract()[0]
+                    print '找到手机预约地址: ', url
+                    return Request(
+                                url = url,
+                                headers = {
+                                    'Referer': res.url
+                                },
+                                dont_filter = True,
+                                callback = self.parse_subscribe
+                           )
+
+        print '获取手机预约地址失败: ', btns
+        return
 
     def parse_subscribe( self, res ):
         print ''
         print '>>>>>> parse_subscribe:'
         print res.url
 
-        resUrl = res.url
+        # f = open('a.html', 'w')
+        # f.write( res.body )
+        # f.close()
 
-        if resUrl == self.settings[ 'URL_SUBSCRIBE' ]:
-            print '准备跳转: %s' % ( self.settings[ 'URL_SUBSCRIBE_FINAL' ] )
+        sel = Selector( res )
 
+        captcha = sel.css( '#img_captcha' )
+        if captcha:
+            codeUrl = captcha.xpath( '@src' ).extract()[0]
+            print '找到验证码: ', codeUrl
+
+            print '分析表单数据项:'
+            # 参考 http://p.www.xiaomi.com/m/choose/js/reserve.js mergeData
+
+            # 基本项
+            formdata = {
+                'username': sel.css( '#username' ).xpath( '@value' ).extract()[0],
+                'email': sel.css( '#email' ).xpath( '@value' ).extract()[0],
+                'mobile': sel.css( '#mobile' ).xpath( '@value' ).extract()[0],
+                # TODO 目前仅抢米3，直接写死
+                'type': 'miphone',
+                'tag3': sel.css( '#s li:first-child' ).xpath( '@data-val' ).extract()[0],
+                # TODO 目前仅抢米3，直接写死
+                'version': 'K',
+                # 下面3个数据值必须为 string, 否则 scrapy 会抛错在 FormRequest 时( unicode_to_str 抛的 )
+                'tag2': '0',
+                'miphone': '1',
+                'mibox': '0'
+            }
+            
+            # 高级项
+            formdata[ 'miphone' ] = formdata[ 'tag3' ]
+            # formdata[ 'authcode_m2s_20131223th_and_box_20131223th' ] = ''
+
+            # 附加项
+            # 1. 获取配置段，并解析成JSON
+            cfg = re.findall( r'var\s+RE\s+=\s+?{([^}]*)', res.body, re.I )
+            if cfg:
+                # 转换为JSON
+                cfg = cfg[0]
+                cfg = cfg.strip().replace( ' ', '' ).replace( '\r\n', '' )
+                cfg = cfg.replace( '\r', '' ).replace( '\n', '' )
+                cfg = cfg.replace( ',', ',"' )
+                cfg = cfg.replace( ':"', '":"' )
+                cfg = '{"' + cfg + '}'
+
+                try:
+                    cfg = json.loads( cfg )
+                except Exception, e:
+                    print '解析错误:', e
+                    print '原始串:', cfg
+                    # open_in_browser( res )
+                    return
+
+            payloads = re.findall( r'RE\.post\s+=\s+?{([^}]*)', res.body, re.I )
+            if payloads:
+                # 转换为JSON
+                payloads = payloads[0]
+                payloads = payloads.strip().replace( ' ', '' ).replace( '\r\n', '' )
+                payloads = payloads.replace( '\r', '' ).replace( '\n', '' )
+                payloads = payloads.replace( '\'', '' )
+
+                for p in payloads.split( ',' ):
+                    d = p.split( ':' )
+                    if d[0].startswith( '//' ):
+                        pass
+                    else:
+                        # print d[0], ' -> ', d[1]
+                        print '表单数据增加: %s -> %s' % ( d[0], d[1] )
+                        formdata[ d[0] ] = d[1]
+
+            # 2. 完善formdata
+            formdata[ cfg[ 'captchaName' ] ] = ''
+
+            print '表单数据预分析完成:'
+            print formdata
+
+            print '准备加载验证码:'
             return Request(
-                    url = self.settings[ 'URL_SUBSCRIBE_FINAL' ],
-                    method = 'get',
-                    headers = {
-                        'Referer': resUrl
-                    },
-                    callback = self.parse_subscribe
-                )
-        elif resUrl == self.settings[ 'URL_SUBSCRIBE_FINAL' ]:
-            sel = Selector( res )
-            btn = sel.css( '.prebtn' )
-            if btn:
-                url = btn.xpath( '@href' ).extract()[0]
-                print '准备跳转: ', url
-
-                return Request(
-                    url = url,
-                    method = 'get',
-                    headers = {
-                        'Referer': resUrl
-                    },
-                    callback = self.parse_subscribe
-                )
+                        url = codeUrl,
+                        meta = {
+                            'form': {
+                                'action': cfg[ 'ajaxURL' ],
+                                'data': formdata,
+                                'code': cfg[ 'captchaName' ],
+                                'waitingUrl': cfg[ 'errorURL' ]
+                            }
+                        },
+                        callback = self.process_code4subscribe
+                    )
         else:
-            print 'TODO'
-            return
+            # 是否绑定手机页
+            h6 = sel.css( 'h6::text' )
+            if h6:
+                # TODO 暂时不支持自动绑定手机
+                print 'TODO：', h6.extract()[0]
+            else:
+                if 'tip_NoYY.html' in res.url:
+                    print '忘记预约了吧!!唉~~~没救了，洗洗睡吧...'
+                elif 'success' in res.url:
+                    print '已经预约过了，直接跳过:'
+                    return self.start_monitor()
+                else:
+                    print 'TODO: 未知错误, 已显示在浏览器窗口中'
+                    open_in_browser( res )
+        return
+
+    def process_code4subscribe( self, res ):
+        print ''
+        print '>>>>>> process_code4subscribe:'
+        print res.url
+        # print res.body
+
+        # 1. 存到本地
+        img = open( 'tmp/a.png', 'w' )
+        img.write( res.body )
+        img.close()
+        print '验证码已下载: ', 'tmp/a.png'
+
+        # 2. ASCII显示到控制台
+        # TODO ..
+        print '暂不支持ASCII显示，自己去tmp目录看吧~~'
+
+        # 3. 中断,等待用户输入
+        code = raw_input( '请输入验证码:' )
+        print '您输入的:', code
+
+        # 4. 恢复，合并输入请求API
+        meta = res.meta
+        if 'form' in meta:
+            # 更新验证码值
+            meta[ 'form' ][ 'data' ][ meta[ 'form' ][ 'code' ] ] = code
+
+        print 'form in meta: ', meta
+
+        return self.do_subscribe( meta )
+
+    def do_subscribe( self, meta ):
+        print ''
+        print '>>>>>> do_subscribe:'
+        print meta
+
+        form = meta[ 'form' ]
+        return FormRequest(
+                    url = form[ 'action' ],
+                    formdata = form[ 'data' ],
+                    meta = meta,
+                    callback = self.parse_dosubscribe
+                )
+
+    def parse_dosubscribe( self, res ):
+        print ''
+        print '>>>>>> parse_dosubscribe:'
+        print res.url
+        # print res.body
+
+        d = None
+        try:
+            d = json.loads( res.body )
+        except Exception, e:
+            raise e
+
+        if d and 'info' in d:
+            meta = res.meta
+
+            if d.info == 'waitingUrl':
+                if 'form' in meta and 'waitingUrl' in meta[ 'form' ]:
+                    # return Request(
+                    #         url = meta[ 'form' ][ 'waitingUrl' ],
+                    #         callback = self.start_monitor
+                    #     )
+
+                    # TODO 这里暂时不处理后续的2个跳转了，麻烦
+                    print '预订成功，这里不在做3秒的跳转了，直接回归主逻辑..'
+                    return self.start_monitor()
+
+            elif d.info == 'authcodeError':
+                print '验证码输入有误或已过期，请重新验证'
+                
+                code = raw_input( '请输入验证码:' )
+                print '您输入的:', code
+
+                # 更新输入
+                meta[ 'form' ][ 'data' ][ meta[ 'form' ][ 'code' ] ] = code
+
+                # 重新提交
+                return self.do_subscribe( meta )
+            elif d.info == 'captchaErrorURL':
+                print '完蛋，输入次数太多了，歇会儿吧~~~'
+                print 'TODO, 暂时直接结束，回头用休眠'
+            else:
+                print '输入信息有错，自己查查吧'
+                print 'TODO, 暂时不做那么复杂了，自己查查吧'
+                print meta
+        else:
+            print '返回格式解析失败:'
+            print res.body
+
+        return
+    
+
 
     """抢成功"""
     def rob_success( self, res, data ):

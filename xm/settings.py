@@ -29,14 +29,15 @@ DOWNLOADER_MIDDLEWARES = {
 PROXY_LIST = []
 
 
-# 登录帐号信息
+# 登录帐号信息(留空时，登录前会要求再次输入)
 ACCOUNT_NAME = ''
 ACCOUNT_PWD = ''
 
 
 # 机型代号列表
 DEVICE_TYPES = {
-    'J': 's3-16-白-?',
+    'J': 's3-16-白-移动',
+    'S': 's3-16-?-联通',
     'K': 's3-16-黑-TD',
     'L': 's3-16-银-TD',
     'N': 's3-64-黑-?',
@@ -51,9 +52,12 @@ SLEEP_TIME = 10
 
 
 # 首页(主要用来获取'开放时间点'')
-URL_HOME = 'http://www.xiaomi.com/'
+URL_HOME = 'http://www.xiaomi.com/index.php'
+# 移动端首页地址(主要用来给一些从移动首页点击过去的页面模拟使用)
+URL_HOME_RERERER = 'http://m.xiaomi.com/index.html'
 # 预约页
-URL_SUBSCRIBE = 'http://p.www.xiaomi.com/open/hd.html'
+# URL_SUBSCRIBE = 'http://p.www.xiaomi.com/open/hd.html'
+URL_SUBSCRIBE = 'http://p.www.xiaomi.com/m/yy/page/%s/%s/index.html'
 # 预约页跳转
 URL_SUBSCRIBE_FINAL = 'http://p.www.xiaomi.com/open/index.html'
 # 登录页
