@@ -56,7 +56,9 @@ class XMSpider( BaseSpider ):
         if hdStartTip:
             t = hdStartTip.extract()[0]
             t = re.findall( self.settings[ 'RE_TIME_START' ], t, re.I )
-            self.open_time = str(datetime.today().year) + t[0] + t[1]
+            self.open_time = str(datetime.today().year)
+            self.open_time += ( '0' if int(t[0]) < 10 else '' ) + t[0]
+            self.open_time += ( '0' if int(t[1]) < 10 else '' ) + t[1]
             print '获取成功: ', self.open_time
         else:
             print '开放时间获取失败'
@@ -158,8 +160,10 @@ class XMSpider( BaseSpider ):
         if success:
             print '登录成功'
             print ''
+            print '检查是否已预约:'
 
-            return self.start_monitor()
+            return self.start_subscribe()
+            # return self.start_monitor()
         else:
             print '登录失败: '
 
@@ -175,91 +179,6 @@ class XMSpider( BaseSpider ):
         return
 
 
-
-    def start_monitor( self ):
-
-        now_time = datetime.today()
-        start_time = datetime( now_time.year, now_time.month, now_time.day, 11, 59, 0 )
-        while now_time < start_time:
-            print '活动开始还有%s，休眠%s秒再检测...' % ( start_time - now_time, self.settings[ 'SLEEP_TIME' ] )
-            time.sleep( self.settings[ 'SLEEP_TIME' ] )
-            now_time = datetime.today()
-
-        print ''
-        print '>>>>>> start_monitor:'
-
-
-        now_timestamp = int(time.mktime(datetime.now().timetuple())) * 1000
-        url = self.settings[ 'URL_CHECK' ] % ( now_timestamp )
-        request = Request(
-            url = url,
-            headers = {
-                'Referer': self.url_referer_check
-            },
-            callback = self.parse_monitor,
-            dont_filter = True
-        )
-
-        # proxy
-        proxy = self.settings[ 'PROXY_LIST' ]
-        if proxy and len( proxy ) > 0:
-            proxy = random.choice( proxy )
-            request.meta[ 'proxy' ] = 'http://%s' % ( proxy )
-        else:
-            proxy = ''
-
-        print url
-        print 'proxy: %s' % ( proxy )
-        print ''
-
-        return request
-
-    def parse_monitor( self, res ):
-        print ''
-        print '>>>>>> parse_monitor:'
-        # print res.body
-        # print ''
-
-        # 获取&解析 JSON
-        d = re.findall( self.settings[ 'RE_CHECK_BODY' ], res.body, re.I )[0]
-        if ( d ):
-            print d
-
-            try:
-                d = json.loads( d )
-                if d:
-                    return self.process_monitor( res, d )
-            except Exception, e:
-                raise e
-        else:
-            print 'parse fail'
-
-        return self.rob_fail( res )
-
-
-    def process_monitor( self, res, data ):
-        # log = open( 'monitor.log', 'a' )
-        # log.write( json.dumps(data) + '\n' )
-        # log.close()
-
-        if ('status' in data) and ('miphone' in data['status']):
-            data = data['status']['miphone']
-
-            if len( data['hdurl'] ) > 0:
-                return self.rob_success( res, data )
-            else:
-                if data['reg'] == False:
-                    print '没有预约~~~'
-                    return self.start_subscribe()
-                elif data['hdstart'] == False:
-                    print '活动冇开始~~~'
-                elif data['hdstop']:
-                    print '活动已结束~~'
-                    # return
-        else:
-            print 'status 或 miphone 字段不存在'
-
-        return self.rob_fail( res )
 
 
 
@@ -477,7 +396,7 @@ class XMSpider( BaseSpider ):
         if d and 'info' in d:
             meta = res.meta
 
-            if d.info == 'waitingUrl':
+            if d['info'] == 'waitingUrl':
                 if 'form' in meta and 'waitingUrl' in meta[ 'form' ]:
                     # return Request(
                     #         url = meta[ 'form' ][ 'waitingUrl' ],
@@ -488,7 +407,7 @@ class XMSpider( BaseSpider ):
                     print '预订成功，这里不在做3秒的跳转了，直接回归主逻辑..'
                     return self.start_monitor()
 
-            elif d.info == 'authcodeError':
+            elif d['info'] == 'authcodeError':
                 print '验证码输入有误或已过期，请重新验证'
                 
                 code = raw_input( '请输入验证码:' )
@@ -499,7 +418,7 @@ class XMSpider( BaseSpider ):
 
                 # 重新提交
                 return self.do_subscribe( meta )
-            elif d.info == 'captchaErrorURL':
+            elif d['info'] == 'captchaErrorURL':
                 print '完蛋，输入次数太多了，歇会儿吧~~~'
                 print 'TODO, 暂时直接结束，回头用休眠'
             else:
@@ -511,6 +430,98 @@ class XMSpider( BaseSpider ):
             print res.body
 
         return
+
+
+
+
+
+
+    def start_monitor( self ):
+
+        now_time = datetime.today()
+        start_time = datetime( now_time.year, now_time.month, now_time.day, 11, 59, 0 )
+        while now_time < start_time:
+            print '活动开始还有%s，休眠%s秒再检测...' % ( start_time - now_time, self.settings[ 'SLEEP_TIME' ] )
+            time.sleep( self.settings[ 'SLEEP_TIME' ] )
+            now_time = datetime.today()
+
+        print ''
+        print '>>>>>> start_monitor:'
+
+
+        now_timestamp = int(time.mktime(datetime.now().timetuple())) * 1000
+        url = self.settings[ 'URL_CHECK' ] % ( now_timestamp )
+        request = Request(
+            url = url,
+            headers = {
+                'Referer': self.url_referer_check
+            },
+            callback = self.parse_monitor,
+            dont_filter = True
+        )
+
+        # proxy
+        proxy = self.settings[ 'PROXY_LIST' ]
+        if proxy and len( proxy ) > 0:
+            proxy = random.choice( proxy )
+            request.meta[ 'proxy' ] = 'http://%s' % ( proxy )
+        else:
+            proxy = ''
+
+        print url
+        print 'proxy: %s' % ( proxy )
+        print ''
+
+        return request
+
+    def parse_monitor( self, res ):
+        print ''
+        print '>>>>>> parse_monitor:'
+        # print res.body
+        # print ''
+
+        # 获取&解析 JSON
+        d = re.findall( self.settings[ 'RE_CHECK_BODY' ], res.body, re.I )[0]
+        if ( d ):
+            print d
+
+            try:
+                d = json.loads( d )
+                if d:
+                    return self.process_monitor( res, d )
+            except Exception, e:
+                raise e
+        else:
+            print 'parse fail'
+
+        return self.rob_fail( res )
+
+    def process_monitor( self, res, data ):
+        # log = open( 'monitor.log', 'a' )
+        # log.write( json.dumps(data) + '\n' )
+        # log.close()
+
+        if ('status' in data) and ('miphone' in data['status']):
+            data = data['status']['miphone']
+
+            if len( data['hdurl'] ) > 0:
+                return self.rob_success( res, data )
+            else:
+                if data['reg'] == False:
+                    print '没有预约~~~'
+                    return self.start_subscribe()
+                elif data['hdstart'] == False:
+                    print '活动冇开始~~~'
+                elif data['hdstop']:
+                    print '活动已结束~~'
+                    # return
+        else:
+            print 'status 或 miphone 字段不存在'
+
+        return self.rob_fail( res )
+
+
+
     
 
 
