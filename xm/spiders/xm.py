@@ -510,11 +510,12 @@ class XMSpider( BaseSpider ):
                 if data['reg'] == False:
                     print '没有预约~~~'
                     return self.start_subscribe()
-                elif data['hdstart'] == False:
-                    print '活动冇开始~~~'
                 elif data['hdstop']:
                     print '活动已结束~~'
-                    # return
+                    return
+                elif data['hdstart'] == False:
+                    print '活动冇开始~~~'
+                    return
         else:
             print 'status 或 miphone 字段不存在'
 
