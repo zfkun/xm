@@ -32,6 +32,11 @@ PROXY_LIST = []
 # 登录帐号信息(留空时，登录前会要求再次输入)
 ACCOUNT_NAME = ''
 ACCOUNT_PWD = ''
+ACCOUNT_PROVINCE = '2' # 北京
+ACCOUNT_CITY = '36' # 北京市
+ACCOUNT_DIS = '384' # 海淀区
+ACCOUNT_ADDRESS = '上地十街10号'
+ACCOUNT_CODE = '100085'
 
 
 # 机型代号列表

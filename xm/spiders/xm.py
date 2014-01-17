@@ -237,10 +237,14 @@ class XMSpider( BaseSpider ):
 
         sel = Selector( res )
 
+        # 目前根据是否找到验证码元素，确定是否为提交页面
+        # TODO 找时间换成更稳定的方式
         captcha = sel.css( '#img_captcha' )
         if captcha:
+            print '确认是预订页了: 目前是检测验证码元素存在与否，后续换更稳定方式~~'
+
             codeUrl = captcha.xpath( '@src' ).extract()[0]
-            print '找到验证码: ', codeUrl
+            print '得到初始验证码地址: ', codeUrl
 
             print '分析表单数据项:'
             # 参考 http://p.www.xiaomi.com/m/choose/js/reserve.js mergeData
@@ -257,13 +261,21 @@ class XMSpider( BaseSpider ):
                 'version': 'K',
                 # 下面3个数据值必须为 string, 否则 scrapy 会抛错在 FormRequest 时( unicode_to_str 抛的 )
                 'tag2': '0',
+                # TODO 目前仅抢米3，写死
                 'miphone': '1',
-                'mibox': '0'
+                # TODO 目前仅抢米3，写死
+                'mibox': '0',
+
+                # 以下为新增字段，为防黄牛 - -!
+                'province': self.settings[ 'ACCOUNT_PROVINCE' ],
+                'city': self.settings[ 'ACCOUNT_CITY' ],
+                'dis': self.settings[ 'ACCOUNT_DIS' ],
+                'edittextarea': self.settings[ 'ACCOUNT_ADDRESS' ].decode( 'utf-8' ),
+                'postalcode': self.settings[ 'ACCOUNT_CODE' ]
             }
             
             # 高级项
             formdata[ 'miphone' ] = formdata[ 'tag3' ]
-            # formdata[ 'authcode_m2s_20131223th_and_box_20131223th' ] = ''
 
             # 附加项
             # 1. 获取配置段，并解析成JSON
@@ -284,6 +296,9 @@ class XMSpider( BaseSpider ):
                     print '原始串:', cfg
                     # open_in_browser( res )
                     return
+
+                cfg[ 'captchaURL' ] = cfg[ 'captchaURL' ] + '/r/%s'
+                print '更新验证码生成配置(方便使用): ', cfg[ 'captchaURL' ]
 
             payloads = re.findall( r'RE\.post\s+=\s+?{([^}]*)', res.body, re.I )
             if payloads:
@@ -308,16 +323,22 @@ class XMSpider( BaseSpider ):
             print '表单数据预分析完成:'
             print formdata
 
-            print '准备加载验证码:'
+            # codeUrl = cfg[ 'captchaURL' ] % ( random.random() )
+            print '准备加载验证码: ', codeUrl
             return Request(
                         url = codeUrl,
                         meta = {
                             'form': {
+                                'refer': res.url,
                                 'action': cfg[ 'ajaxURL' ],
                                 'data': formdata,
                                 'code': cfg[ 'captchaName' ],
-                                'waitingUrl': cfg[ 'errorURL' ]
+                                'waitingUrl': cfg[ 'errorURL' ],
+                                'codeUrl': cfg[ 'captchaURL' ]
                             }
+                        },
+                        headers = {
+                            'Referer': res.url
                         },
                         callback = self.process_code4subscribe
                     )
@@ -363,21 +384,25 @@ class XMSpider( BaseSpider ):
         if 'form' in meta:
             # 更新验证码值
             meta[ 'form' ][ 'data' ][ meta[ 'form' ][ 'code' ] ] = code
+            print '更新验证码为您输入的: ', code
 
-        print 'form in meta: ', meta
+        # print 'meta: ', meta
 
         return self.do_subscribe( meta )
 
     def do_subscribe( self, meta ):
         print ''
         print '>>>>>> do_subscribe:'
-        print meta
+        print 'meta: ', meta
 
         form = meta[ 'form' ]
         return FormRequest(
                     url = form[ 'action' ],
                     formdata = form[ 'data' ],
                     meta = meta,
+                    headers = {
+                        'Referer': form[ 'refer' ]
+                    },
                     callback = self.parse_dosubscribe
                 )
 
@@ -385,7 +410,7 @@ class XMSpider( BaseSpider ):
         print ''
         print '>>>>>> parse_dosubscribe:'
         print res.url
-        # print res.body
+        print res.body
 
         d = None
         try:
@@ -395,11 +420,15 @@ class XMSpider( BaseSpider ):
 
         if d and 'info' in d:
             meta = res.meta
+            form = {}
+
+            if 'form' in meta:
+                form = meta[ 'form' ]
 
             if d['info'] == 'waitingUrl':
-                if 'form' in meta and 'waitingUrl' in meta[ 'form' ]:
+                if 'waitingUrl' in form:
                     # return Request(
-                    #         url = meta[ 'form' ][ 'waitingUrl' ],
+                    #         url = form[ 'waitingUrl' ],
                     #         callback = self.start_monitor
                     #     )
 
@@ -407,24 +436,37 @@ class XMSpider( BaseSpider ):
                     print '预订成功，这里不在做3秒的跳转了，直接回归主逻辑..'
                     return self.start_monitor()
 
-            elif d['info'] == 'authcodeError':
-                print '验证码输入有误或已过期，请重新验证'
+            elif d[ 'info' ] == 'authcodeError':
+                print '验证码输入有误或已过期，准备重新验证'
+                print 'JSON解析结果: ', d
+                print '响应的meta: ', meta
                 
-                code = raw_input( '请输入验证码:' )
-                print '您输入的:', code
+                codeUrl = form[ 'codeUrl' ] % ( random.random() )
+                print '准备加载验证码: ', codeUrl
+                
+                return Request(
+                    url = codeUrl,
+                    meta = {
+                        'form': form
+                    },
+                    headers = {
+                        'Referer': form[ 'refer' ]
+                    },
+                    callback = self.process_code4subscribe
+                )
 
-                # 更新输入
-                meta[ 'form' ][ 'data' ][ meta[ 'form' ][ 'code' ] ] = code
+            elif d[ 'info' ] == 'authcodeErrorUrl':
+                print '悲剧被锁了~~验证码输入错误太多,等会再试吧'
 
-                # 重新提交
-                return self.do_subscribe( meta )
-            elif d['info'] == 'captchaErrorURL':
+            elif d[ 'info' ] == 'captchaErrorURL':
                 print '完蛋，输入次数太多了，歇会儿吧~~~'
                 print 'TODO, 暂时直接结束，回头用休眠'
+
             else:
                 print '输入信息有错，自己查查吧'
                 print 'TODO, 暂时不做那么复杂了，自己查查吧'
-                print meta
+                print 'JSON解析结果: ', d
+                print '响应的meta: ', meta
         else:
             print '返回格式解析失败:'
             print res.body
