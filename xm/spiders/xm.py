@@ -224,6 +224,7 @@ class XMSpider( BaseSpider ):
                            )
 
         print '获取手机预约地址失败: ', btns
+
         return
 
     def parse_subscribe( self, res ):
@@ -349,11 +350,17 @@ class XMSpider( BaseSpider ):
                 # TODO 暂时不支持自动绑定手机
                 print 'TODO：', h6.extract()[0]
             else:
-                if 'tip_NoYY.html' in res.url:
-                    print '忘记预约了吧!!唉~~~没救了，洗洗睡吧...'
-                elif 'success' in res.url:
+                if 'success' in res.url:
                     print '已经预约过了，直接跳过:'
                     return self.start_monitor()
+
+                elif 'tip_NoYY.html' in res.url:
+                    print '忘记预约了吧!!唉~~~没救了，洗洗睡吧...'
+
+                elif 'tip_tooMuchTry' in res.url:
+                    # http://p.www.xiaomi.com/m/activities/open/common/tip_tooMuchTry.html
+                    print '暂时被冻结了~~因验证码输入错误次数超限，等吧...'
+
                 else:
                     print 'TODO: 未知错误, 已显示在浏览器窗口中'
                     open_in_browser( res )
