@@ -186,7 +186,10 @@ class XMSpider( BaseSpider ):
         print ''
         print '>>>>>> start_subscribe:'
         
-        url = self.settings[ 'URL_SUBSCRIBE' ] % ( self.open_time[:4], self.open_time[4:] )
+        # url = self.settings[ 'URL_SUBSCRIBE' ] % ( self.open_time[:4], self.open_time[4:] )
+        # print url
+
+        url = self.settings[ 'URL_CHECK_PAYMENT' ]
         print url
 
         return Request(
@@ -198,34 +201,59 @@ class XMSpider( BaseSpider ):
                     callback = self.process_subscribe
                )
 
+    # TODO: 优化预约的检测和自动提交逻辑，区分出本轮、下轮的预约
     def process_subscribe( self, res ):
         print ''
         print '>>>>>> process_subscribe:'
         print res.url
+        
+        if 'tip_NoSuccess.html' in res.url:
+            aid = re.findall( self.settings[ 'RE_SUBSCRIBE_AID' ], res.url, re.I )
+            if aid:
+                aid = aid[ 0 ]
+            else:
+                aid = ''
 
-        sel = Selector( res )
-        btns = sel.css( '.btnbox li > a' )
-        if btns:
-            for btn in btns:
-                txt = btn.css( '::text' ).extract()[0]
-                url = btn.xpath( '@href' ).extract()[0]
-                print '按钮 -> %s , %s' % ( txt, url )
+            url = self.settings[ 'URL_SUBSCRIBE' ] % ( aid )
+
+            print '还冇预约(仍可预约本轮) 或 错过预约(只能预约下轮)'
+            print '准备去预约: ', url
+
+            return Request(
+                        url = url,
+                        headers = {
+                            'Referer': res.url
+                        },
+                        dont_filter = True,
+                        callback = self.parse_subscribe
+                   )
+        else:
+            print '已经预约过了: ', res.body
+            print 'TODO: 这里看情况是否直接 return self.start_monitor()'
+        
+        # sel = Selector( res )
+        # btns = sel.css( '.btnbox li > a' )
+        # if btns:
+        #     for btn in btns:
+        #         txt = btn.css( '::text' ).extract()[0]
+        #         url = btn.xpath( '@href' ).extract()[0]
+        #         print '按钮 -> %s , %s' % ( txt, url )
                 
-                if '手机' in txt:
-                    url = btn.xpath( '@href' ).extract()[0]
-                    print '找到手机预约地址: ', url
-                    return Request(
-                                url = url,
-                                headers = {
-                                    'Referer': res.url
-                                },
-                                dont_filter = True,
-                                callback = self.parse_subscribe
-                           )
+        #         if '手机' in txt:
+        #             url = btn.xpath( '@href' ).extract()[0]
+        #             print '找到手机预约地址: ', url
+        #             return Request(
+        #                         url = url,
+        #                         headers = {
+        #                             'Referer': res.url
+        #                         },
+        #                         dont_filter = True,
+        #                         callback = self.parse_subscribe
+        #                    )
 
-        print '获取手机预约地址失败: ', btns
+        # print '获取手机预约地址失败: ', btns
 
-        return
+        # return
 
     def parse_subscribe( self, res ):
         print ''
@@ -354,8 +382,16 @@ class XMSpider( BaseSpider ):
                     print '已经预约过了，直接跳过:'
                     return self.start_monitor()
 
+                # 此逻辑貌似应该不会出现了
+                # 因刚对 start_subscribe() 逻辑做了调整，已区分不出是否预约了本轮
+                # TODO: 优化预约的检测和自动提交逻辑，区分出本轮、下轮的预约
                 elif 'tip_NoYY.html' in res.url:
                     print '忘记预约了吧!!唉~~~没救了，洗洗睡吧...'
+                    
+                    # 顺便提醒下是否自动预约下一轮
+                    yyNext = raw_input( '是否预约下一轮(Y/N):' )
+                    if yyNext.lower() == 'y':
+                        return self.start_subscribe()
 
                 elif 'tip_tooMuchTry' in res.url:
                     # http://p.www.xiaomi.com/m/activities/open/common/tip_tooMuchTry.html
@@ -408,7 +444,8 @@ class XMSpider( BaseSpider ):
                     formdata = form[ 'data' ],
                     meta = meta,
                     headers = {
-                        'Referer': form[ 'refer' ]
+                        'Referer': form[ 'refer' ],
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     callback = self.parse_dosubscribe
                 )

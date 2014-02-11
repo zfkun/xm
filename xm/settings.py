@@ -60,9 +60,11 @@ SLEEP_TIME = 10
 URL_HOME = 'http://www.xiaomi.com/index.php'
 # 移动端首页地址(主要用来给一些从移动首页点击过去的页面模拟使用)
 URL_HOME_RERERER = 'http://m.xiaomi.com/index.html'
+# 预约检测API
+URL_CHECK_PAYMENT = 'http://tc.hd.xiaomi.com/check?_a=payment_check&_m=1'
 # 预约页
-# URL_SUBSCRIBE = 'http://p.www.xiaomi.com/open/hd.html'
-URL_SUBSCRIBE = 'http://p.www.xiaomi.com/m/yy/page/%s/%s/index.html'
+URL_SUBSCRIBE = 'http://a.hd.xiaomi.com/register/book/m/1/a/%s'
+# URL_SUBSCRIBE = 'http://p.www.xiaomi.com/m/yy/page/%s/%s/index.html'
 # 预约页跳转
 URL_SUBSCRIBE_FINAL = 'http://p.www.xiaomi.com/open/index.html'
 # 登录页
@@ -93,3 +95,5 @@ RE_FORM_FIELD_MID = r'document\.getElementById\(\'(\w+)\'\)\.value\s?=\s?mid\s?'
 RE_ORDER_DEVICE_SOLDOVER = r'soldOver'
 # 订单页可选购的设备所在DOM包含的mid属性值(即设备代号mid)
 RE_ORDER_MID_ATTR = r'mid="(\w+)"'
+# 预约地址构造之aid参数
+RE_SUBSCRIBE_AID = r'_el=(\d+)&'
