@@ -186,18 +186,18 @@ class XMSpider( BaseSpider ):
         print ''
         print '>>>>>> start_subscribe:'
         
-        # url = self.settings[ 'URL_SUBSCRIBE' ] % ( self.open_time[:4], self.open_time[4:] )
-        # print url
-
-        url = self.settings[ 'URL_CHECK_PAYMENT' ]
+        url = self.settings[ 'URL_CHECK_SUBSCRIBE' ] % ( self.open_time[:4], self.open_time[4:] )
+        # url = self.settings[ 'URL_CHECK_PAYMENT' ]
+        # url = self.settings[ 'URL_CHECK_SUBSCRIBE' ]
         print url
 
         return Request(
                     url = url,
                     method = 'get',
-                    headers = {
-                        'Referer': self.settings[ 'URL_HOME_RERERER' ]
-                    },
+                    # headers = {
+                    #     'Referer': self.settings[ 'URL_HOME_RERERER' ]
+                    # },
+                    dont_filter = True,
                     callback = self.process_subscribe
                )
 
@@ -207,8 +207,41 @@ class XMSpider( BaseSpider ):
         print '>>>>>> process_subscribe:'
         print res.url
         
-        if 'tip_NoSuccess.html' in res.url:
-            aid = re.findall( self.settings[ 'RE_SUBSCRIBE_AID' ], res.url, re.I )
+        if 'tip_NoRegister.html' in res.url:
+            print '错过了本次开放购买的预约~~~'
+
+            # 顺便提醒下是否自动预约下一轮
+            sel = Selector( res )
+            nextYYBtn = sel.css( '#phoneBkBtn' )
+            if nextYYBtn:
+                yyNext = raw_input( '是否预约下一轮(Y/N):' )
+                if yyNext.lower() == 'y':
+                    # url = nextYYBtn.xpath( '@href' ).extract()[0]
+
+                    # 获取手机类型对应的aid (目前仅搞手机，其他的可根据settings配置更换)
+                    aid = re.findall( self.settings[ 'RE_SUBSCRIBE_AID_PHONE' ], res.url, re.I )
+                    if aid:
+                        aid = aid[ 0 ]
+                    else:
+                        aid = ''
+                    url = self.settings[ 'URL_SUBSCRIBE' ] % ( aid )
+                    
+                    print '准备预约下一轮: ', url
+
+                    return Request(
+                                url = url,
+                                headers = {
+                                    'Referer': res.url
+                                },
+                                dont_filter = True,
+                                callback = self.parse_subscribe
+                           )
+            else:
+                print '冇找到"预约下一轮"按钮~~~'
+
+        elif 'tip_NoSuccess.html' in res.url:
+            # 获取手机类型对应的aid (目前仅搞手机，其他的可根据settings配置更换)
+            aid = re.findall( self.settings[ 'RE_SUBSCRIBE_AID_PHONE' ], res.url, re.I )
             if aid:
                 aid = aid[ 0 ]
             else:
@@ -227,33 +260,32 @@ class XMSpider( BaseSpider ):
                         dont_filter = True,
                         callback = self.parse_subscribe
                    )
-        else:
-            print '已经预约过了: ', res.body
-            print 'TODO: 这里看情况是否直接 return self.start_monitor()'
         
-        # sel = Selector( res )
-        # btns = sel.css( '.btnbox li > a' )
-        # if btns:
-        #     for btn in btns:
-        #         txt = btn.css( '::text' ).extract()[0]
-        #         url = btn.xpath( '@href' ).extract()[0]
-        #         print '按钮 -> %s , %s' % ( txt, url )
-                
-        #         if '手机' in txt:
-        #             url = btn.xpath( '@href' ).extract()[0]
-        #             print '找到手机预约地址: ', url
-        #             return Request(
-        #                         url = url,
-        #                         headers = {
-        #                             'Referer': res.url
-        #                         },
-        #                         dont_filter = True,
-        #                         callback = self.parse_subscribe
-        #                    )
+        else:
+            sel = Selector( res )
+            btns = sel.css( '.btnbox li > a' )
+            if btns:
+                for btn in btns:
+                    txt = btn.css( '::text' ).extract()[0]
+                    url = btn.xpath( '@href' ).extract()[0]
+                    print '按钮 -> %s , %s' % ( txt, url )
+                    
+                    if '手机' in txt:
+                        url = btn.xpath( '@href' ).extract()[0]
+                        print '找到手机预约地址: ', url
+                        return Request(
+                                    url = url,
+                                    headers = {
+                                        'Referer': res.url
+                                    },
+                                    dont_filter = True,
+                                    callback = self.parse_subscribe
+                               )
+            else:
+                print '已经预约过了，退出检测，进入抢购环节'
+                return self.start_monitor()
 
-        # print '获取手机预约地址失败: ', btns
-
-        # return
+        return
 
     def parse_subscribe( self, res ):
         print ''
@@ -266,111 +298,120 @@ class XMSpider( BaseSpider ):
 
         sel = Selector( res )
 
-        # 目前根据是否找到验证码元素，确定是否为提交页面
-        # TODO 找时间换成更稳定的方式
-        captcha = sel.css( '#img_captcha' )
-        if captcha:
-            print '确认是预订页了: 目前是检测验证码元素存在与否，后续换更稳定方式~~'
+        # # 目前根据是否找到验证码元素，确定是否为提交页面
+        # # TODO 找时间换成更稳定的方式
+        # captcha = sel.css( '#codeImg' )
+        # if captcha:
+        if self.settings[ 'URL_SUBSCRIBE_FORM' ] in res.url:
+            print '确认是预订页了: URL检测匹配'
 
-            codeUrl = captcha.xpath( '@src' ).extract()[0]
-            print '得到初始验证码地址: ', codeUrl
+            print '页面改版，已换成纯JS模式，待时间修改代码，暂时结束'
+            print '数据更好拿了，页面"app._Data.main"变量中'
 
-            print '分析表单数据项:'
-            # 参考 http://p.www.xiaomi.com/m/choose/js/reserve.js mergeData
+            open_in_browser( res )
 
-            # 基本项
-            formdata = {
-                'username': sel.css( '#username' ).xpath( '@value' ).extract()[0],
-                'email': sel.css( '#email' ).xpath( '@value' ).extract()[0],
-                'mobile': sel.css( '#mobile' ).xpath( '@value' ).extract()[0],
-                # TODO 目前仅抢米3，直接写死
-                'type': 'miphone',
-                'tag3': sel.css( '#s li:first-child' ).xpath( '@data-val' ).extract()[0],
-                # TODO 目前仅抢米3，直接写死
-                'version': 'K',
-                # 下面3个数据值必须为 string, 否则 scrapy 会抛错在 FormRequest 时( unicode_to_str 抛的 )
-                'tag2': '0',
-                # TODO 目前仅抢米3，写死
-                'miphone': '1',
-                # TODO 目前仅抢米3，写死
-                'mibox': '0',
 
-                # 以下为新增字段，为防黄牛 - -!
-                'province': self.settings[ 'ACCOUNT_PROVINCE' ],
-                'city': self.settings[ 'ACCOUNT_CITY' ],
-                'dis': self.settings[ 'ACCOUNT_DIS' ],
-                'edittextarea': self.settings[ 'ACCOUNT_ADDRESS' ].decode( 'utf-8' ),
-                'postalcode': self.settings[ 'ACCOUNT_CODE' ]
-            }
+
+            # captcha = sel.css( '#codeImg img' )
+            # codeUrl = captcha.xpath( '@src' ).extract()[0]
+            # print '得到初始验证码地址: ', codeUrl
+
+            # print '分析表单数据项:'
+            # # 参考 http://p.www.xiaomi.com/m/choose/js/reserve.js mergeData
+
+            # # 基本项
+            # formdata = {
+            #     'username': sel.css( '#username' ).xpath( '@value' ).extract()[0],
+            #     'email': sel.css( '#email' ).xpath( '@value' ).extract()[0],
+            #     'mobile': sel.css( '#mobile' ).xpath( '@value' ).extract()[0],
+            #     # TODO 目前仅抢米3，直接写死
+            #     'type': 'miphone',
+            #     'tag3': sel.css( '#s li:first-child' ).xpath( '@data-val' ).extract()[0],
+            #     # TODO 目前仅抢米3，直接写死
+            #     'version': 'K',
+            #     # 下面3个数据值必须为 string, 否则 scrapy 会抛错在 FormRequest 时( unicode_to_str 抛的 )
+            #     'tag2': '0',
+            #     # TODO 目前仅抢米3，写死
+            #     'miphone': '1',
+            #     # TODO 目前仅抢米3，写死
+            #     'mibox': '0',
+
+            #     # 以下为新增字段，为防黄牛 - -!
+            #     'province': self.settings[ 'ACCOUNT_PROVINCE' ],
+            #     'city': self.settings[ 'ACCOUNT_CITY' ],
+            #     'dis': self.settings[ 'ACCOUNT_DIS' ],
+            #     'edittextarea': self.settings[ 'ACCOUNT_ADDRESS' ].decode( 'utf-8' ),
+            #     'postalcode': self.settings[ 'ACCOUNT_CODE' ]
+            # }
             
-            # 高级项
-            formdata[ 'miphone' ] = formdata[ 'tag3' ]
+            # # 高级项
+            # formdata[ 'miphone' ] = formdata[ 'tag3' ]
 
-            # 附加项
-            # 1. 获取配置段，并解析成JSON
-            cfg = re.findall( r'var\s+RE\s+=\s+?{([^}]*)', res.body, re.I )
-            if cfg:
-                # 转换为JSON
-                cfg = cfg[0]
-                cfg = cfg.strip().replace( ' ', '' ).replace( '\r\n', '' )
-                cfg = cfg.replace( '\r', '' ).replace( '\n', '' )
-                cfg = cfg.replace( ',', ',"' )
-                cfg = cfg.replace( ':"', '":"' )
-                cfg = '{"' + cfg + '}'
+            # # 附加项
+            # # 1. 获取配置段，并解析成JSON
+            # cfg = re.findall( r'var\s+RE\s+=\s+?{([^}]*)', res.body, re.I )
+            # if cfg:
+            #     # 转换为JSON
+            #     cfg = cfg[0]
+            #     cfg = cfg.strip().replace( ' ', '' ).replace( '\r\n', '' )
+            #     cfg = cfg.replace( '\r', '' ).replace( '\n', '' )
+            #     cfg = cfg.replace( ',', ',"' )
+            #     cfg = cfg.replace( ':"', '":"' )
+            #     cfg = '{"' + cfg + '}'
 
-                try:
-                    cfg = json.loads( cfg )
-                except Exception, e:
-                    print '解析错误:', e
-                    print '原始串:', cfg
-                    # open_in_browser( res )
-                    return
+            #     try:
+            #         cfg = json.loads( cfg )
+            #     except Exception, e:
+            #         print '解析错误:', e
+            #         print '原始串:', cfg
+            #         # open_in_browser( res )
+            #         return
 
-                cfg[ 'captchaURL' ] = cfg[ 'captchaURL' ] + '/r/%s'
-                print '更新验证码生成配置(方便使用): ', cfg[ 'captchaURL' ]
+            #     cfg[ 'captchaURL' ] = cfg[ 'captchaURL' ] + '/r/%s'
+            #     print '更新验证码生成配置(方便使用): ', cfg[ 'captchaURL' ]
 
-            payloads = re.findall( r'RE\.post\s+=\s+?{([^}]*)', res.body, re.I )
-            if payloads:
-                # 转换为JSON
-                payloads = payloads[0]
-                payloads = payloads.strip().replace( ' ', '' ).replace( '\r\n', '' )
-                payloads = payloads.replace( '\r', '' ).replace( '\n', '' )
-                payloads = payloads.replace( '\'', '' )
+            # payloads = re.findall( r'RE\.post\s+=\s+?{([^}]*)', res.body, re.I )
+            # if payloads:
+            #     # 转换为JSON
+            #     payloads = payloads[0]
+            #     payloads = payloads.strip().replace( ' ', '' ).replace( '\r\n', '' )
+            #     payloads = payloads.replace( '\r', '' ).replace( '\n', '' )
+            #     payloads = payloads.replace( '\'', '' )
 
-                for p in payloads.split( ',' ):
-                    d = p.split( ':' )
-                    if d[0].startswith( '//' ):
-                        pass
-                    else:
-                        # print d[0], ' -> ', d[1]
-                        print '表单数据增加: %s -> %s' % ( d[0], d[1] )
-                        formdata[ d[0] ] = d[1]
+            #     for p in payloads.split( ',' ):
+            #         d = p.split( ':' )
+            #         if d[0].startswith( '//' ):
+            #             pass
+            #         else:
+            #             # print d[0], ' -> ', d[1]
+            #             print '表单数据增加: %s -> %s' % ( d[0], d[1] )
+            #             formdata[ d[0] ] = d[1]
 
-            # 2. 完善formdata
-            formdata[ cfg[ 'captchaName' ] ] = ''
+            # # 2. 完善formdata
+            # formdata[ cfg[ 'captchaName' ] ] = ''
 
-            print '表单数据预分析完成:'
-            print formdata
+            # print '表单数据预分析完成:'
+            # print formdata
 
-            # codeUrl = cfg[ 'captchaURL' ] % ( random.random() )
-            print '准备加载验证码: ', codeUrl
-            return Request(
-                        url = codeUrl,
-                        meta = {
-                            'form': {
-                                'refer': res.url,
-                                'action': cfg[ 'ajaxURL' ],
-                                'data': formdata,
-                                'code': cfg[ 'captchaName' ],
-                                'waitingUrl': cfg[ 'errorURL' ],
-                                'codeUrl': cfg[ 'captchaURL' ]
-                            }
-                        },
-                        headers = {
-                            'Referer': res.url
-                        },
-                        callback = self.process_code4subscribe
-                    )
+            # # codeUrl = cfg[ 'captchaURL' ] % ( random.random() )
+            # print '准备加载验证码: ', codeUrl
+            # return Request(
+            #             url = codeUrl,
+            #             meta = {
+            #                 'form': {
+            #                     'refer': res.url,
+            #                     'action': cfg[ 'ajaxURL' ],
+            #                     'data': formdata,
+            #                     'code': cfg[ 'captchaName' ],
+            #                     'waitingUrl': cfg[ 'errorURL' ],
+            #                     'codeUrl': cfg[ 'captchaURL' ]
+            #                 }
+            #             },
+            #             headers = {
+            #                 'Referer': res.url
+            #             },
+            #             callback = self.process_code4subscribe
+            #         )
         else:
             # 是否绑定手机页
             h6 = sel.css( 'h6::text' )
