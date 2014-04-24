@@ -39,51 +39,65 @@ ACCOUNT_ADDRESS = '上地十街10号'
 ACCOUNT_CODE = '100085'
 
 
-# 机型代号列表
+# 机型代号列表 (TD: 移动, WCDMA: 联通, CDMA2000: 电信)
 DEVICE_TYPES = {
-    'J': 's3-16-白-移动',
-    'S': 's3-16-?-联通',
+    # 红米Note
+    'D1': 'hn-8-白-TD', 
+    
+    # 红米
+    'F': 'h-?-灰-TD',
+    'M': 'h-?-灰-WCDMA',
+    'R': 'h-?-灰-CDMA2000',   
+
+    # 米3
+    'J': 's3-16-白-TD',
+    'S': 's3-16-?-WCDMA',
     'K': 's3-16-黑-TD',
     'L': 's3-16-银-TD',
     'N': 's3-64-黑-?',
-    'F': 'h-?-灰-移动',
-    'M': 'h-?-灰-联通',
+
+    # 米2s
     'B': 's2-32-?-标准',
-    'C': 'S2-32-?-电信',
+    'C': 'S2-32-?-CDMA2000',
 }
 
 # 活动开始前每次检测的休眠间隔(s)
 SLEEP_TIME = 10
 
 
+# TODO
+# 下轮抢购开放时间 (目前因小米改版换域名，先手动写吧，有时间搞成自动化)
+OPEN_TIME = '20140429'
+
+
 # 首页(主要用来获取'开放时间点'')
-URL_HOME = 'http://www.xiaomi.com/index.php'
+URL_HOME = 'http://m.mi.com/home/index.html'
 # 移动端首页地址(主要用来给一些从移动首页点击过去的页面模拟使用)
-URL_HOME_RERERER = 'http://m.xiaomi.com/index.html'
+URL_HOME_RERERER = 'http://m.mi.com/home/index.html'
 # 预约页
-URL_SUBSCRIBE = 'http://a.hd.xiaomi.com/register/book/m/1/a/%s'
+URL_SUBSCRIBE = 'http://a.hd.mi.com/register/book/m/1/a/%s'
 # 预约页跳转
-URL_SUBSCRIBE_FINAL = 'http://p.www.xiaomi.com/open/index.html'
+URL_SUBSCRIBE_FINAL = 'http://s1.mi.com/open/index.html'
 # 预约表单确认页
-URL_SUBSCRIBE_FORM = 'http://a.hd.xiaomi.com/product/book/a/1/m/1'
+URL_SUBSCRIBE_FORM = 'http://a.hd.mi.com/product/book/a/18/m/1'
 # 登录页
 URL_PASS = 'https://account.xiaomi.com/pass/serviceLogin'
 # 登录API
 URL_LOGIN = 'https://account.xiaomi.com/pass/serviceLoginAuth2'
 # 检测API
-URL_CHECK = 'http://tc.hd.xiaomi.com/hdget?callback=hdcontrol&_=%s'
+URL_CHECK = 'http://tc.hd.mi.com/hdget?callback=hdcontrol&_=%s'
 # 检测API的referer(==抢购页)
-URL_CHECK_REFERER = 'http://p.www.xiaomi.com/m/op/page/%s/index.html'
+URL_CHECK_REFERER = 'http://p.www.mi.com/m/op/page/%s/index.html'
 # 检测是否已预约当前轮
-# URL_CHECK_SUBSCRIBE = 'http://t.hd.xiaomi.com/c/?_a=4&_op=check'
-# URL_CHECK_SUBSCRIBE = 'http://a.hd.xiaomi.com/register/check/a/%s/m/1'
-URL_CHECK_SUBSCRIBE = 'http://p.www.xiaomi.com/m/yy/%s/%s/index.html'
+# URL_CHECK_SUBSCRIBE = 'http://t.hd.mi.com/c/?_a=4&_op=check'
+# URL_CHECK_SUBSCRIBE = 'http://a.hd.mi.com/register/check/a/%s/m/1'
+URL_CHECK_SUBSCRIBE = 'http://s1.mi.com/m/yy/%s/%s/index.html'
 # 检测是否有待支付的
-URL_CHECK_PAYMENT = 'http://tc.hd.xiaomi.com/check?_a=payment_check&_m=1'
+URL_CHECK_PAYMENT = 'http://tc.hd.mi.com/check?_a=payment_check&_m=1'
 # 订单页
-URL_ORDER_WEB = 'http://t.hd.xiaomi.com/s/%s&_m=1'
+URL_ORDER_WEB = 'http://t.hd.mi.com/s/%s&_m=1'
 # 验证码， 注意：第一参数需替换 _op=choose 为 _op=authcode
-URL_IMGCODE = 'http://t.hd.xiaomi.com/s/%s&_m=1&r=%s'
+URL_IMGCODE = 'http://t.hd.mi.com/s/%s&_m=1&r=%s'
 
 # 活动开始时间(从首页的Tip处分析获取,得到格式为: [ '年', '月', '时' ])
 RE_TIME_START = r'(\d+)'

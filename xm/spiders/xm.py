@@ -61,8 +61,9 @@ class XMSpider( BaseSpider ):
             self.open_time += ( '0' if int(t[1]) < 10 else '' ) + t[1]
             print '获取成功: ', self.open_time
         else:
-            print '开放时间获取失败'
-            return
+            print '获取失败, 根据配置构造...'
+            self.open_time = self.settings[ 'OPEN_TIME' ]
+            print '构造成功: ', self.open_time
 
         print '初始化相关url变量:'
         self.url_referer_check = self.settings[ 'URL_CHECK_REFERER' ] % ( self.open_time )
@@ -270,7 +271,7 @@ class XMSpider( BaseSpider ):
                     url = btn.xpath( '@href' ).extract()[0]
                     print '按钮 -> %s , %s' % ( txt, url )
                     
-                    if '手机' in txt:
+                    if '/product/book/' in url:
                         url = btn.xpath( '@href' ).extract()[0]
                         print '找到手机预约地址: ', url
                         return Request(
@@ -305,10 +306,119 @@ class XMSpider( BaseSpider ):
         if self.settings[ 'URL_SUBSCRIBE_FORM' ] in res.url:
             print '确认是预订页了: URL检测匹配'
 
-            print '页面改版，已换成纯JS模式，待时间修改代码，暂时结束'
-            print '数据更好拿了，页面"app._Data.main"变量中'
+            # print '页面改版，已换成纯JS模式，待时间修改代码，暂时结束'
+            # print '数据更好拿了，页面"app._Data.main"变量中'
 
-            open_in_browser( res )
+            # open_in_browser( res )
+
+
+            print '分析表单数据项:'
+
+            # 获取配置段，并解析成JSON
+            mainData = re.findall( r'app\._Data\s+=\s+?{([^;]*)\};', res.body, re.I )
+            if mainData:
+                # 转换为JSON
+                mainData = mainData[0]
+                mainData = mainData.strip().replace( ' ', '' ).replace( '\r\n', '' )
+                mainData = mainData.replace( '\r', '' ).replace( '\n', '' )
+                # mainData = mainData.replace( ',', ',"' )
+                # mainData = mainData.replace( ':"', '":"' )
+                mainData = '{' + mainData + '}'
+
+                try:
+                    mainData = json.loads( mainData )
+                except Exception, e:
+                    print '解析错误:', e
+                    print '原始串:', mainData
+                    # open_in_browser( res )
+                    return
+
+                # 更新
+                mainData = mainData[ 'main' ]
+
+                # hack 下验证码url
+                mainData[ 'authcodeUrl' ] = mainData[ 'authcodeUrl' ] + '?%s'
+                print '更新验证码生成配置(方便使用): ', mainData[ 'authcodeUrl' ]
+            else:
+                print '分析失败，页面JSON数据获取失败'
+                return
+
+
+            # 反复使用的玩意~
+            apiData = mainData[ 'apiData' ]
+
+            # 表单提交数据
+            formdata = {
+                '_a': mainData[ '_a' ],
+                '_aff': mainData[ 'authForForm' ],
+                # 机型(红米Note)
+                'version': 'D1',
+                # 是否购买预约套装, 1: 买, 0: 不买
+                'tag2': '0',
+                # ?? 页面生成的
+                '_ia': '1',
+
+                # 收货地址信息
+                'username': apiData[ 'apiUserName' ] if apiData[ 'apiUserName' ] else mainData[ 'username' ],
+                'mobile': apiData[ 'apiMobile' ] if apiData[ 'apiMobile' ] else mainData[ 'mobile' ],
+                'email': mainData[ 'email' ],
+                # 'province': '',
+                # 'city': '',
+                # 'dis': '',
+                # 'edittextarea': apiData[ 'address' ],
+                # 'postalcode': apiData[ 'zipcode' ],
+                'province': self.settings[ 'ACCOUNT_PROVINCE' ],
+                'city': self.settings[ 'ACCOUNT_CITY' ],
+                'dis': self.settings[ 'ACCOUNT_DIS' ],
+                'edittextarea': self.settings[ 'ACCOUNT_ADDRESS' ].decode( 'utf-8' ),
+                'postalcode': self.settings[ 'ACCOUNT_CODE' ]
+            }
+
+            # 提取城市信息 & 更新表单数据
+            citys = apiData[ 'citys' ]
+            try:
+                citys = json.loads( citys )
+            except Exception, e:
+                print '解析错误:', e
+                print '原始串:', apiData[ 'citys' ]
+                return
+
+            # # 这里因为 `省 < 市 < 区` 的id值大小存在递增的规律，这么处理下就行
+            # # { '1': 'a', '3': 'b', '2': 'c'}  =>  [ '1', '2', '3' ]
+            # citys = sorted( list( citys ) )
+
+            # # 更新表单城市信息
+            # formdata[ 'province' ] = citys[0]
+            # formdata[ 'city' ] = citys[1]
+            # formdata[ 'dis' ] = citys[2]
+
+            # 验证码字段跳过，交给后面的 process_code4subscribe 补充处理
+            # formdata[ mainData[ 'auth_post_name' ] ] = ''
+
+            print '表单数据预分析完成:'
+            print formdata
+
+
+            codeUrl = mainData[ 'authcodeUrl' ] % ( random.random() )
+            print '准备加载验证码: ', codeUrl
+            return Request(
+                        url = codeUrl,
+                        meta = {
+                            'form': {
+                                'refer': res.url,
+                                'action': mainData[ 'doBookUrl' ],
+                                'data': formdata,
+                                'code': mainData[ 'auth_post_name' ],
+                                'codeUrl': mainData[ 'authcodeUrl' ],
+                                'waitingUrl': mainData[ 'tipUrl' ][ 'authcodeErrorUrl' ]
+                            }
+                        },
+                        headers = {
+                            'Referer': res.url
+                        },
+                        dont_filter = True, # 重要
+                        callback = self.process_code4subscribe
+                    )
 
 
 
@@ -412,6 +522,7 @@ class XMSpider( BaseSpider ):
             #             },
             #             callback = self.process_code4subscribe
             #         )
+
         else:
             # 是否绑定手机页
             h6 = sel.css( 'h6::text' )
@@ -488,6 +599,7 @@ class XMSpider( BaseSpider ):
                         'Referer': form[ 'refer' ],
                         'X-Requested-With': 'XMLHttpRequest'
                     },
+                    dont_filter = True,
                     callback = self.parse_dosubscribe
                 )
 
