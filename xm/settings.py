@@ -67,19 +67,19 @@ SLEEP_TIME = 10
 
 # TODO
 # 下轮抢购开放时间 (目前因小米改版换域名，先手动写吧，有时间搞成自动化)
-OPEN_TIME = '20140429'
+OPEN_TIME = '20140520'
 
 
 # 首页(主要用来获取'开放时间点'')
-URL_HOME = 'http://m.mi.com/home/index.html'
+URL_HOME = 'http://www.mi.com/index.php'
 # 移动端首页地址(主要用来给一些从移动首页点击过去的页面模拟使用)
-URL_HOME_RERERER = 'http://m.mi.com/home/index.html'
+URL_HOME_RERERER = 'http://m.mi.com/home/'
 # 预约页
 URL_SUBSCRIBE = 'http://a.hd.mi.com/register/book/m/1/a/%s'
 # 预约页跳转
 URL_SUBSCRIBE_FINAL = 'http://s1.mi.com/open/index.html'
 # 预约表单确认页
-URL_SUBSCRIBE_FORM = 'http://a.hd.mi.com/product/book/a/18/m/1'
+URL_SUBSCRIBE_FORM = 'http://a.hd.mi.com/product/book/a/'
 # 登录页
 URL_PASS = 'https://account.xiaomi.com/pass/serviceLogin'
 # 登录API

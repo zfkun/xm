@@ -22,7 +22,7 @@ from scrapy.utils.response import open_in_browser
 
 class XMSpider( BaseSpider ):
     name = 'xm'
-    allowed_domains = [ 'xiaomi.com' ]
+    allowed_domains = [ 'mi.com', 'xiaomi.com' ]
     
     # 可能会动态修改的配置项
     account = '' # 帐号
@@ -52,7 +52,7 @@ class XMSpider( BaseSpider ):
         sel = Selector( res )
 
         print '获取开放时间:'
-        hdStartTip = sel.css( '#kaifanggm::text' )
+        hdStartTip = sel.css( '.open-buy-info a::text' )
         if hdStartTip:
             t = hdStartTip.extract()[0]
             t = re.findall( self.settings[ 'RE_TIME_START' ], t, re.I )
@@ -195,9 +195,9 @@ class XMSpider( BaseSpider ):
         return Request(
                     url = url,
                     method = 'get',
-                    # headers = {
-                    #     'Referer': self.settings[ 'URL_HOME_RERERER' ]
-                    # },
+                    headers = {
+                        'Referer': self.settings[ 'URL_HOME_RERERER' ]
+                    },
                     dont_filter = True,
                     callback = self.process_subscribe
                )
@@ -299,11 +299,10 @@ class XMSpider( BaseSpider ):
 
         sel = Selector( res )
 
-        # # 目前根据是否找到验证码元素，确定是否为提交页面
-        # # TODO 找时间换成更稳定的方式
-        # captcha = sel.css( '#codeImg' )
-        # if captcha:
-        if self.settings[ 'URL_SUBSCRIBE_FORM' ] in res.url:
+        # 目前根据是否找到验证码元素，确定是否为提交页面
+        captcha = sel.css( '#codeImg' )
+        if captcha:
+        # if self.settings[ 'URL_SUBSCRIBE_FORM' ] in res.url:
             print '确认是预订页了: URL检测匹配'
 
             # print '页面改版，已换成纯JS模式，待时间修改代码，暂时结束'
